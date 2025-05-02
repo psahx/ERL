@@ -5,7 +5,7 @@
     Lampa.Noty.show('Starting ES Module Test...'); // Visual feedback in Lampa
 
     // **Replace with the ACTUAL URL where you hosted testModule.js**
-    const moduleUrl = 'URL_TO_YOUR_HOSTED_testModule.js';
+    const moduleUrl = 'https://psahx.github.io/ERL/SRC/testModule.js';
 
     // Try dynamic import
     import(moduleUrl)
