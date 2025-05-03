@@ -21,7 +21,7 @@ console.log('--- PsahxRatingsPlugin: main.js EXECUTING ---');
     }
 
 
-    function component(object) { 
+    function component(object, InfoPanelHandler) { 
 
     console.log('DEBUG component: STARTING. Received object:', object ? object.source : 'undefined', 'Received InfoPanelHandler type:', typeof InfoPanelHandler);
     
