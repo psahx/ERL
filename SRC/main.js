@@ -44,65 +44,8 @@ console.log('--- PsahxRatingsPlugin: main.js EXECUTING ---');
 // Replace the existing 'this.create' within 'component' function in SRC/main.js
 
 this.create = function () {
-    console.log('--- PsahxRatingsPlugin: component.create STARTING ---');
-    console.log('PsahxRatingsPlugin: component.create executing...'); // Existing log
-
-    // Log the received constructor to be sure
-    console.log('DEBUG component.create: Type of InfoPanelHandler is:', typeof InfoPanelHandler);
-    // console.log('DEBUG component.create: InfoPanelHandler looks like:', InfoPanelHandler ? InfoPanelHandler.toString().substring(0, 200) + '...' : 'undefined'); // Optional deep check
-
-    // Check if InfoPanelHandler seems valid before using 'new'
-    if (!InfoPanelHandler || typeof InfoPanelHandler !== 'function') {
-         console.error("COMPONENT CREATE ERROR: InfoPanelHandler not a valid function!");
-         return; // Stop if constructor isn't valid
-    }
-
-    console.log('PsahxRatingsPlugin: component.create() attempting: new InfoPanelHandler(object)');
-    let tempInstance = null; // Use a temporary variable first
-    try {
-         tempInstance = new InfoPanelHandler(object);
-         // Log immediately after instantiation attempt
-         console.log('DEBUG component.create: Instantiation result (tempInstance):', tempInstance ? 'Instance OK' : 'FAILED (null/undefined)');
-    } catch(e) {
-         console.error("COMPONENT CREATE ERROR: 'new InfoPanelHandler(object)' threw an error!", e);
-         // If 'new' fails, info will not be assigned below
-    }
-
-    // Assign to the 'info' variable declared in the outer 'component' scope
-    info = tempInstance;
-    console.log('DEBUG component.create: Assigned to outer "info" variable:', info ? 'Assignment OK' : 'Assignment FAILED (info is still null/undefined)');
-
-    // Now check 'info' before trying to use it
-    if (info && typeof info.create === 'function') {
-          console.log('PsahxRatingsPlugin: component.create() calling info.create()...');
-          try {
-              info.create(); // Call method on the new instance
-              console.log('PsahxRatingsPlugin: info.create() apparently completed.');
-          } catch(e) {
-              console.error("COMPONENT CREATE ERROR: info.create() threw an error!", e);
-          }
-    } else {
-         console.error("COMPONENT CREATE ERROR: 'info' instance is invalid or missing 'create' method AFTER assignment.");
-    }
-
-    // Check scroll/render AFTER info should be valid and info.create ran
-    if (typeof scroll === 'undefined' || !scroll) console.error("COMPONENT CREATE ERROR: 'scroll' object is undefined!");
-    if (!info) console.error("COMPONENT CREATE ERROR: 'info' object is undefined before scroll.minus!");
-    if (info && typeof info.render !== 'function') console.error("COMPONENT CREATE ERROR: info.render is not a function!");
-
-    if (scroll && info && typeof info.render === 'function') {
-        try{
-             scroll.minus(info.render());
-             console.log('PsahxRatingsPlugin: scroll.minus(info.render()) called.');
-        } catch(e) {
-             console.error("COMPONENT CREATE ERROR: scroll.minus(info.render()) failed!", e);
-        }
-    } else {
-         console.error("COMPONENT CREATE ERROR: scroll or info.render unavailable for scroll.minus.");
-    }
-
-    console.log('PsahxRatingsPlugin: component.create completed.');
-}; // End this.create replacement
+    console.log('--- PsahxRatingsPlugin: component.create EXECUTING MINIMAL LOG ---');
+};
 
     this.empty = function () {
         /* Original empty code */ 
