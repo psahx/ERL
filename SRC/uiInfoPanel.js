@@ -114,57 +114,119 @@ export function InfoPanelHandler(object) {
              return;
         }
 
-        // ========================================================================
-        // == PASTE YOUR ENTIRE ORIGINAL 'this.draw' FUNCTION LOGIC BELOW      ==
-        // ==                                                                    ==
-        // == IMPORTANT: Find the line:                                          ==
-        // ==   var mdblistResult = mdblistRatingsCache[data.id];                ==
-        // == AND CHANGE IT TO:                                                  ==
-        // ==   var mdblistResult = this.mdblistRatingsCache[data.id]; // Use this. ==
-        // ========================================================================
+            var create_year = ((data.release_date || data.first_air_date || '0000') + '').slice(0, 4);
+            var vote = parseFloat((data.vote_average || 0) + '').toFixed(1);
+            var head = [];
+            // ** Initialize separate arrays for layout lines **
+            var lineOneDetails = []; // To hold Ratings, Runtime, PG
+            var genreDetails = [];   // To hold only Genres string
+            var countries = Lampa.Api.sources.tmdb.parseCountries(data);
+            var pg = Lampa.Api.sources.tmdb.parsePG(data);
 
-        // Example start (replace with your full code):
-        var create_year = ((data.release_date || data.first_air_date || '0000') + '').slice(0, 4);
-        var vote = parseFloat((data.vote_average || 0) + '').toFixed(1); // TMDB Vote Average
-        var head = [];
-        var lineOneDetails = [];
-        var genreDetails = [];
-        var countries = Lampa.Api.sources.tmdb.parseCountries(data);
-        var pg = Lampa.Api.sources.tmdb.parsePG(data);
+            // --- Logo URLs --- (Unchanged - keep all)
+            const imdbLogoUrl = 'https://psahx.github.io/ps_plug/IMDb_3_2_Logo_GOLD.png';
+            const tmdbLogoUrl = 'https://psahx.github.io/ps_plug/TMDB.svg';
+            const rtFreshLogoUrl = 'https://psahx.github.io/ps_plug/Rotten_Tomatoes.svg';
+            const rtRottenLogoUrl = 'https://psahx.github.io/ps_plug/Rotten_Tomatoes_rotten.svg';
+            const rtAudienceFreshLogoUrl = 'https://psahx.github.io/ps_plug/Rotten_Tomatoes_positive_audience.svg';
+            const rtAudienceSpilledLogoUrl = 'https://psahx.github.io/ps_plug/Rotten_Tomatoes_negative_audience.svg';
+            const metacriticLogoUrl = 'https://psahx.github.io/ps_plug/Metacritic_M.png';
+            const traktLogoUrl = 'https://psahx.github.io/ps_plug/Trakt.svg';
+            const letterboxdLogoUrl = 'https://psahx.github.io/ps_plug/letterboxd-decal-dots-pos-rgb.svg';
+            const rogerEbertLogoUrl = 'https://psahx.github.io/ps_plug/Roger_Ebert.jpeg';
+            const kpLogoUrl = 'https://psahx.github.io/ps_plug/kinopoisk-icon-main.svg'; // Unused
 
-        const imdbLogoUrl = 'https://psahx.github.io/ps_plug/IMDb_3_2_Logo_GOLD.png';
-        // ... PASTE ALL OTHER LOGO URLS ...
-        const kpLogoUrl = 'https://psahx.github.io/ps_plug/kinopoisk-icon-main.svg'; // Unused
+            // --- Rating Toggles State --- (Unchanged - read all needed for line 1)
+            let imdbStored = Lampa.Storage.get('show_rating_imdb', true);
+            const showImdb = (imdbStored === true || imdbStored === 'true');
+            let tmdbStored = Lampa.Storage.get('show_rating_tmdb', true);
+            const showTmdb = (tmdbStored === true || tmdbStored === 'true');
+            // No need to read KP toggle anymore
+            let tomatoesStored = Lampa.Storage.get('show_rating_tomatoes', false);
+            const showTomatoes = (tomatoesStored === true || tomatoesStored === 'true');
+            let audienceStored = Lampa.Storage.get('show_rating_audience', false);
+            const showAudience = (audienceStored === true || audienceStored === 'true');
+            let metacriticStored = Lampa.Storage.get('show_rating_metacritic', false);
+            const showMetacritic = (metacriticStored === true || metacriticStored === 'true');
+            let traktStored = Lampa.Storage.get('show_rating_trakt', false);
+            const showTrakt = (traktStored === true || traktStored === 'true');
+            let letterboxdStored = Lampa.Storage.get('show_rating_letterboxd', false);
+            const showLetterboxd = (letterboxdStored === true || letterboxdStored === 'true');
+            let rogerEbertStored = Lampa.Storage.get('show_rating_rogerebert', false);
+            const showRogerebert = (rogerEbertStored === true || rogerEbertStored === 'true');
 
-        // --- Rating Toggles State ---
-        let imdbStored = Lampa.Storage.get('show_rating_imdb', true);
-        // ... PASTE ALL OTHER TOGGLE READS ...
-        const showRogerebert = (rogerEbertStored === true || rogerEbertStored === 'true');
+            // --- Build Head --- (Unchanged)
+            if (create_year !== '0000') head.push('<span>' + create_year + '</span>');
+            if (countries.length > 0) head.push(countries.join(', '));
 
-        // --- Get MDBList Rating Results ---
-        var mdblistResult = this.mdblistRatingsCache[data.id]; // <-- IMPORTANT: Use 'this.' here
+            // --- Get MDBList Rating Results ---
+            var mdblistResult = this.mdblistRatingsCache[data.id]; // Use this.
 
-        // --- Build Line 1 Details (Ratings) ---
-        if (showImdb) { /* ... PASTE ORIGINAL IMDB LOGIC ... */ }
-        if (showTmdb) { /* ... PASTE ORIGINAL TMDB LOGIC ... */ }
-        // ... PASTE ALL OTHER RATING DISPLAY LOGIC (RT, AUDIENCE, META, TRAKT, LB, EBERT) ...
+            // --- Build Line 1 Details (Ratings) ---
+            // Push all active rating divs into lineOneDetails
+            if (showImdb) {
+                var imdbRating = mdblistResult && mdblistResult.imdb !== null && typeof mdblistResult.imdb === 'number' ? parseFloat(mdblistResult.imdb || 0).toFixed(1) : '0.0';
+                lineOneDetails.push('<div class="full-start__rate imdb-rating-item">' + '<div>' + imdbRating + '</div>' + '<img src="' + imdbLogoUrl + '" class="rating-logo imdb-logo" alt="IMDB" draggable="false">' + '</div>');
+            }
+            if (showTmdb) {
+                lineOneDetails.push('<div class="full-start__rate tmdb-rating-item">' + '<div>' + vote + '</div>' + '<img src="' + tmdbLogoUrl + '" class="rating-logo tmdb-logo" alt="TMDB" draggable="false">' + '</div>');
+            }
+            if (showTomatoes) {
+                 if (mdblistResult && typeof mdblistResult.tomatoes === 'number' && mdblistResult.tomatoes !== null) { let score = mdblistResult.tomatoes; let logoUrl = ''; if (score >= 60) { logoUrl = rtFreshLogoUrl; } else if (score >= 0) { logoUrl = rtRottenLogoUrl; } if (logoUrl) { lineOneDetails.push('<div class="full-start__rate rt-rating-item">' + '<div class="rt-score">' + score + '</div>' + '<img src="' + logoUrl + '" class="rating-logo rt-logo" alt="RT Critics" draggable="false">' + '</div>'); } }
+            }
+            if (showAudience) {
+                 if (mdblistResult && mdblistResult.popcorn != null) { let parsedScore = parseFloat(mdblistResult.popcorn); if (!isNaN(parsedScore)) { let score = parsedScore; let logoUrl = ''; if (score >= 60) { logoUrl = rtAudienceFreshLogoUrl; } else if (score >= 0) { logoUrl = rtAudienceSpilledLogoUrl; } if (logoUrl) { lineOneDetails.push('<div class="full-start__rate rt-audience-rating-item">' + '<div class="rt-audience-score">' + score + '</div>' + '<img src="' + logoUrl + '" class="rating-logo rt-audience-logo" alt="RT Audience" draggable="false">' + '</div>'); } } }
+            }
+            if (showMetacritic) {
+                 if (mdblistResult && typeof mdblistResult.metacritic === 'number' && mdblistResult.metacritic !== null) { let score = mdblistResult.metacritic; if (score >= 0) { lineOneDetails.push('<div class="full-start__rate metacritic-rating-item">' + '<div class="metacritic-score">' + score + '</div>' + '<img src="' + metacriticLogoUrl + '" class="rating-logo metacritic-logo" alt="Metacritic" draggable="false">' + '</div>'); } }
+            }
+            if (showTrakt) {
+                 if (mdblistResult && mdblistResult.trakt != null) { let parsedScore = parseFloat(mdblistResult.trakt); if (!isNaN(parsedScore)) { let score = parsedScore; if (score >= 0) { lineOneDetails.push('<div class="full-start__rate trakt-rating-item">' + '<div class="trakt-score">' + score + '</div>' + '<img src="' + traktLogoUrl + '" class="rating-logo trakt-logo" alt="Trakt" draggable="false">' + '</div>'); } } }
+            }
+            if (showLetterboxd) {
+                 if (mdblistResult && mdblistResult.letterboxd != null) { let parsedScore = parseFloat(mdblistResult.letterboxd); if (!isNaN(parsedScore)) { let score = parsedScore.toFixed(1); if (parsedScore >= 0) { lineOneDetails.push('<div class="full-start__rate letterboxd-rating-item">' + '<div class="letterboxd-score">' + score + '</div>' + '<img src="' + letterboxdLogoUrl + '" class="rating-logo letterboxd-logo" alt="Letterboxd" draggable="false">' + '</div>'); } } }
+            }
+            if (showRogerebert) {
+                 if (mdblistResult && mdblistResult.rogerebert != null) { let parsedScore = parseFloat(mdblistResult.rogerebert); if (!isNaN(parsedScore)) { let score = parsedScore.toFixed(1); if (parsedScore >= 0) { lineOneDetails.push('<div class="full-start__rate rogerebert-rating-item">' + '<div class="rogerebert-score">' + score + '</div>' + '<img src="' + rogerEbertLogoUrl + '" class="rating-logo rogerebert-logo" alt="Roger Ebert" draggable="false">' + '</div>'); } } }
+            }
 
-        // --- Build Line 1 Details (Runtime, PG) ---
-        if (data.runtime) { /* ... PASTE ORIGINAL RUNTIME LOGIC ... */ }
-        if (pg) { /* ... PASTE ORIGINAL PG LOGIC ... */ }
 
-        // --- Build Genre Details ---
-        if (data.genres && data.genres.length > 0) { /* ... PASTE ORIGINAL GENRE LOGIC ... */ }
+            // --- Build Line 1 Details (Runtime, PG) ---
+            // Push Runtime and PG into lineOneDetails array
+            if (data.runtime) {
+                lineOneDetails.push(Lampa.Utils.secondsToTime(data.runtime * 60, true));
+            }
+            if (pg) {
+                lineOneDetails.push('<span class="full-start__pg" style="font-size: 0.9em;">' + pg + '</span>');
+            }
 
-        // --- Update HTML ---
-        html.find('.new-interface-info__head').empty().append(head.join(', '));
-        // ... PASTE ORIGINAL FINAL DETAILS HTML CONSTRUCTION AND INJECTION ...
-        html.find('.new-interface-info__details').html(finalDetailsHtml);
+            // --- Build Genre Details ---
+            // Push ONLY the Genres string into genreDetails array
+            if (data.genres && data.genres.length > 0) {
+                genreDetails.push(data.genres.map(function (item) { return Lampa.Utils.capitalizeFirstLetter(item.name); }).join(' | '));
+            }
 
-        // ========================================================================
-        // == END OF PASTED 'this.draw' LOGIC                                  ==
-        // ========================================================================
-    }; // End draw function
+            // --- Update HTML ---
+            html.find('.new-interface-info__head').empty().append(head.join(', '));
+
+            // ** Construct final details HTML with specific lines **
+            let lineOneHtml = lineOneDetails.join('<span class="new-interface-info__split">&#9679;</span>');
+            // Genres string is already joined by '|', so just get the first element if it exists
+            let genresHtml = genreDetails.length > 0 ? genreDetails[0] : '';
+
+            let finalDetailsHtml = '';
+            // Add line 1 (Ratings, Runtime, PG) if it has content
+            if (lineOneDetails.length > 0) {
+                 finalDetailsHtml += `<div class="line-one-details">${lineOneHtml}</div>`;
+            }
+            // Add line 2 (Genres) if it has content
+             if (genresHtml) {
+                 finalDetailsHtml += `<div class="genre-details-line">${genresHtml}</div>`;
+             }
+
+            // Set the new HTML structure into the details element
+            html.find('.new-interface-info__details').html(finalDetailsHtml);
+        }; // End draw function
 
     /**
      * Loads the base movie/show details from the TMDB API.
@@ -179,49 +241,19 @@ export function InfoPanelHandler(object) {
             console.error("PsahxRatingsPlugin [uiInfoPanel.js]: Missing Lampa components in load.");
             return;
         }
-
-        // ===================================================================
-        // == PASTE YOUR ENTIRE ORIGINAL 'this.load' FUNCTION LOGIC BELOW ==
-        // ===================================================================
-
-        // Example start (replace with your full code):
-        var _this = this; // Keep reference to 'this' for callbacks
-        clearTimeout(debounceTimer);
-        // Construct TMDB API URL
+        
+        var _this = this;
+        clearTimeout(timer); 
         var url = Lampa.TMDB.api((data.name ? 'tv' : 'movie') + '/' + data.id + '?api_key=' + Lampa.TMDB.key() + '&append_to_response=content_ratings,release_dates&language=' + Lampa.Storage.get('language'));
-
-        // Check internal TMDB cache first
-        if (loadedTmdbData[url]) {
-             // Data already loaded, just draw it
-             // This draw call uses the cached TMDB data, and 'this.draw' will internally
-             // check 'this.mdblistRatingsCache' for the MDBList ratings.
-             return this.draw(loadedTmdbData[url]);
-        }
-
-        // Debounce the TMDB API call
-        debounceTimer = setTimeout(function () {
-            tmdbNetwork.clear();
-            tmdbNetwork.timeout(5000); // Use appropriate timeout
-            tmdbNetwork.silent(url,
-                function (movie) { // Success callback for TMDB fetch
-                    loadedTmdbData[url] = movie; // Cache TMDB result
-                    // Add method if missing (original logic)
-                    if (!movie.method) movie.method = data.name ? 'tv' : 'movie';
-                    // Call draw with the fetched TMDB data
-                    _this.draw(movie);
-                },
-                function(xhr, status){ // Error callback for TMDB fetch
-                     console.error("PsahxRatingsPlugin [uiInfoPanel.js]: Failed to load base TMDB data", status, xhr);
-                     // Optionally, attempt to draw with minimal data or show error in UI
-                     // _this.draw(data); // Draw using the initial limited data?
-                }
-            );
-        }, 300); // Debounce time
-
-        // ===================================================================
-        // == END OF PASTED 'this.load' LOGIC                             ==
-        // ===================================================================
+        if (loaded[url]) return this.draw(loaded[url]); 
+        timer = setTimeout(function () 
+                { network.clear(); network.timeout(5000); network.silent(url, function (movie) 
+                        { loaded[url] = movie; 
+                            if (!movie.method) movie.method = data.name ? 'tv' : 'movie'; _this.draw(movie); 
+                        }); 
+                }, 300); 
     }; // End load function
+
 
     /**
      * Returns the main HTML element for rendering.
