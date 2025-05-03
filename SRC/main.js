@@ -134,28 +134,34 @@ this.create = function () {
     this.push = function () {}; 
 
         
-    this.build = function (data) {
+// Replace the existing 'this.build' within 'component' function in SRC/main.js
+this.build = function (data) {
     var _this2 = this;
     lezydata = data; // Store data reference
 
-    // --- Ensure the 'info' instance exists ---
-    // It should have been created by 'this.create = function() {...}'
-    // This check calls 'this.create()' only if 'info' hasn't been initialized yet.
+    // --- Ensure the 'info' instance exists, attempting creation ONCE ---
     if (!info) {
-        console.log("PsahxRatingsPlugin: component.build calling this.create()...");
-        this.create(); // Ensure info panel is created via the component's create method
-        // Safety check in case this.create failed somehow
-        if (!info) {
-             console.error("PsahxRatingsPlugin: component.build - this.create() did not initialize 'info' instance!");
-             // Maybe stop here or show an error UI? For now, just log and potentially stop.
-             if(this.activity) this.activity.loader(false); // Try to stop loader
-             return;
-        }
+         console.log("PsahxRatingsPlugin: component.build calling this.create()...");
+         this.create(); // Attempt to create info instance
+
+         // ** TEMPORARY DEBUGGING CHANGE **
+         // Check info *after* the attempt. If still not set, log the error
+         // AND return early from build for THIS item to prevent infinite loops/crashes.
+         if (!info) {
+              console.error("PsahxRatingsPlugin: component.build - AFTER this.create(), 'info' is still undefined! Halting build logic for this item.");
+              // Stop further execution of *this* build call to break the loop
+              return; // <-- ADDED RETURN HERE
+         }
+         // If we reach here, info should have been created successfully by this.create()
+         console.log("PsahxRatingsPlugin: component.build - info instance seems created.");
     }
-   
+
+    // --- Original logic using the 'info' instance ---
+    // This part should now only run if 'info' was successfully created above.
+
     // Ensure scroll object exists from component scope
     if (scroll && info && typeof info.render === 'function') {
-         scroll.minus(info.render()); // Assuming this was the correct place
+         scroll.minus(info.render());
     } else { console.error("PsahxRatingsPlugin: Missing scroll/info object in build"); }
 
     // Ensure 'this.append' exists
@@ -165,8 +171,8 @@ this.create = function () {
 
     // Ensure 'html' object exists
     if (html && info && scroll && typeof info.render === 'function' && typeof scroll.render === 'function') {
-        html.append(info.render()); // Append the InfoPanelHandler's rendered HTML
-        html.append(scroll.render()); // Append the scrollable items list
+        html.append(info.render());
+        html.append(scroll.render());
     } else { console.error("PsahxRatingsPlugin: Missing html/info/scroll object in build"); }
 
 
@@ -185,17 +191,20 @@ this.create = function () {
     // Ensure 'items' array exists before accessing
     if (items && items.length > 0 && items[0] && items[0].data && info) {
         active = 0;
-        info.update(items[active].data); // Update the info panel
-        this.background(items[active].data); // Update background
+        // This check ensures info exists before using it
+        info.update(items[active].data);
+        this.background(items[active].data);
+    } else if (!info) {
+         console.error("PsahxRatingsPlugin: component.build - Cannot update info panel because 'info' is null/undefined.");
     }
 
-    // Check Lampa.Activity before using
-    // Also assuming 'this.activity' is correctly assigned when component is created by Lampa
+
     if (this.activity && typeof this.activity.loader === 'function') {
          this.activity.loader(false);
          this.activity.toggle();
     } else { console.error("PsahxRatingsPlugin: this.activity not properly set up in component.build."); }
-};
+    console.log("PsahxRatingsPlugin: component.build completed (or exited early)."); // Added completion log
+}; // --- End of temporary 'this.build' replacement ---
     
     this.background = function (elem) {
         if (!elem || !elem.backdrop_path) return; 
