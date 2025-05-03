@@ -85,48 +85,50 @@ this.build = function (data) {
     var _this2 = this;
     lezydata = data; // Store data reference
 
-    // --- ADDED DEBUG LOGS for 'this' and 'this.create' ---
     console.log('DEBUG component.build: START. typeof this:', typeof this);
-    // Check if this.create exists and is a function right before checking 'info'
-    console.log('DEBUG component.build: typeof this.create right now is:', typeof this.create);
-    // --- End Debugging ---
+    console.log('DEBUG component.build: typeof this.create:', typeof this.create);
 
     // Ensure the 'info' instance exists, attempting creation ONCE
     if (!info) {
-         console.log("PsahxRatingsPlugin: component.build calling this.create()...");
-         // Log 'this' context right before the specific call
-         console.log('DEBUG component.build: "this" right before calling this.create:', (typeof this));
+         console.log("PsahxRatingsPlugin: component.build attempting call to this.create()...");
 
-         // Add a try/catch around the actual call
-         try {
-             // Check if it's actually a function before calling
-             if (typeof this.create === 'function') {
-                 this.create(); // Attempt to create info instance
-             } else {
-                 console.error("COMPONENT BUILD ERROR: this.create is NOT a function right before call!");
+         // ** TRY calling via a local variable **
+         if (typeof this.create === 'function') {
+             const createFunc = this.create; // Assign method to local variable first
+             console.log('DEBUG component.build: Assigned this.create to local var createFunc, type:', typeof createFunc);
+             try {
+                  console.log('DEBUG component.build: Attempting call via local variable createFunc()...');
+                  // Call the function using the local variable reference
+                  createFunc(); // <<<< CALLING LOCAL VARIABLE HERE
+                  console.log('DEBUG component.build: Call via local variable finished.');
+             } catch(e) {
+                  console.error("COMPONENT BUILD ERROR: Calling 'createFunc()' threw an error!", e);
              }
-         } catch(e) {
-             // Catch errors specifically from calling this.create()
-             console.error("COMPONENT BUILD ERROR: Calling 'this.create()' threw an error!", e);
+         } else {
+              console.error("COMPONENT BUILD ERROR: this.create is NOT a function right before assignment!");
          }
 
          // Check info *after* the attempt
          if (!info) {
-              console.error("PsahxRatingsPlugin: component.build - AFTER this.create(), 'info' is still undefined! Halting build logic for this item.");
+              // This error is still expected if the minimal create doesn't set info
+              console.error("PsahxRatingsPlugin: component.build - AFTER this.create() attempt, 'info' is still undefined! Halting build logic for this item.");
               return; // Keep temporary return to prevent loop crash
          }
+         // We wouldn't expect to reach here with the minimal create function
          console.log("PsahxRatingsPlugin: component.build - info instance seems created.");
     }
 
     // --- Original logic using the 'info' instance ---
-    console.log("PsahxRatingsPlugin: component.build proceeding with rest of logic..."); // Added log
+    console.log("PsahxRatingsPlugin: component.build proceeding with rest of logic...");
 
-    if (scroll && info && typeof info.render === 'function') { /* ... scroll.minus ... */ }
-    if (typeof this.append === 'function') { /* ... forEach ... */ }
-    if (html && info && scroll /*...*/) { /* ... html.append ... */ }
-    if (newlampa) { /* ... Lampa.Layer etc ... */ }
-    if (items && items.length > 0 && items[0] && items[0].data && info) { /* ... info.update, this.background ... */ }
-    if (this.activity /*...*/) { /* ... loader, toggle ... */ }
+    // ... (Rest of your build logic as pasted before) ...
+    if (scroll && info && typeof info.render === 'function') { scroll.minus(info.render()); } else { /*...*/ }
+    if (typeof this.append === 'function') { data.slice(0, viewall ? data.length : 2).forEach(this.append.bind(this)); }
+    if (html && info && scroll /*...*/) { html.append(info.render()); html.append(scroll.render()); } else { /*...*/ }
+    if (newlampa) { /* ... Lampa.Layer etc ... */ } else { /*...*/ }
+    if (items && items.length > 0 && items[0] && items[0].data && info) { info.update(items[active].data); this.background(items[active].data); } else if (!info) { /*...*/ }
+    if (this.activity /*...*/) { this.activity.loader(false); this.activity.toggle(); } else { /*...*/ }
+
 
     console.log("PsahxRatingsPlugin: component.build completed (or exited early).");
 }; // --- End of debug 'this.build' replacement ---
