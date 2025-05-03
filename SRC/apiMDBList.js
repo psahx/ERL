@@ -1,5 +1,6 @@
 // SRC/apiMDBList.js
 'use strict';
+console.log("PsahxRatingsPlugin: Executing apiMDBList.js");
 
 // Import necessary modules
 import { config } from 'https://psahx.github.io/ERL/SRC/config.js';
