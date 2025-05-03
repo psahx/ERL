@@ -156,36 +156,27 @@ describe('Settings Registration and Interaction (settings.js)', () => {
             expect(mockItem.checked).toBe(false); // Item state updated visually
         });
 
-
+ 
         it('should call Lampa.Controller.toggle when onBack is called', () => {
-     // Arrange: Simulate button click to get callbacks
-     registerSettings();
-     const buttonOnChange = mockSettingsApiAddParam.mock.calls.find(call => call[0]?.param?.name === 'select_ratings_button')[0]?.onChange;
-     buttonOnChange(); // Trigger Select.show to register callbacks passed to the mock
+      // selectOptions and onBackCallback are available from the nested beforeEach setup
+      const onBackCallback = selectOptions.onBack;
+      expect(onBackCallback).toBeInstanceOf(Function);
 
-     // Ensure Lampa.Select.show mock was called
-     expect(mockSelectShow).toHaveBeenCalled();
-     const selectOptions = mockSelectShow.mock.calls[0][0];
-     const onBackCallback = selectOptions.onBack;
-     expect(onBackCallback).toBeInstanceOf(Function); // Ensure we have the callback
+      const expectedControllerName = 'settings';
 
-     // Arrange: Define the expected controller name
-     const expectedControllerName = 'settings';
-     // Arrange: **Set the mock return value JUST before the action**
-     mockControllerEnabled.mockReturnValue({ name: expectedControllerName });
+      // **Use vi.spyOn to modify the mock method behavior for the next call**
+      const enabledSpy = vi.spyOn(window.Lampa.Controller, 'enabled');
+      enabledSpy.mockReturnValueOnce({ name: expectedControllerName });
 
-     // Action: Call the onBack callback
-     onBackCallback();
+      // Action: Call the onBack callback
+      onBackCallback();
 
-     // Assertions
-     expect(mockControllerToggle).toHaveBeenCalledTimes(1); // Verify it was called once
+      // Assertions
+      expect(mockControllerToggle).toHaveBeenCalledTimes(1);
+      expect(mockControllerToggle).toHaveBeenCalledWith(expectedControllerName);
 
-     // **DEBUG:** Log the actual arguments received by the mock
-     const actualArgs = mockControllerToggle.mock.calls[0];
-     console.log('DEBUG: mockControllerToggle called with:', actualArgs);
-
-     // Final check: Verify it was called with the expected argument
-     expect(mockControllerToggle).toHaveBeenCalledWith(expectedControllerName);
+      // Optional: Restore original spy implementation if needed, though beforeEach should handle it
+      enabledSpy.mockRestore();
         
         });
     });
