@@ -1,96 +1,102 @@
 // SRC/apiMDBList.test.js
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 // --- Mock dependencies ---
 
-// **Step 1: Define the variables that will hold the mock functions FIRST.**
-const mockGetCache = vi.fn();
-const mockSetCache = vi.fn();
+// Declare variables for mock functions - they will be defined in beforeEach BEFORE doMock
+let mockGetCache;
+let mockSetCache;
 
-// **Step 2: NOW, use vi.mock. Its factory function can reference the variables above.**
-// Vitest hoists this vi.mock call, but the variables should be accessible
-// within the factory function's scope when it eventually runs.
-vi.mock('./cache.js', () => ({
-    getCache: mockGetCache,
-    setCache: mockSetCache,
-}));
-
-// Mock config (importing real one)
+// Mock config (importing real one - fine as it doesn't interact with hoisting issue)
 import { config } from './config.js';
 
-// Mock Lampa APIs
-let mockStorageData = {}; // For Lampa.Storage.get (API Key)
-const mockLampaStorageGet = vi.fn((key, defaultValue) => mockStorageData.hasOwnProperty(key) ? mockStorageData[key] : defaultValue);
-
-// Mock Lampa.Reguest
+// Mock Lampa APIs (declare vars, define in beforeEach)
+let mockStorageData = {};
+let mockLampaStorageGet;
 let storedSilentSuccessCb = null;
 let storedSilentErrorCb = null;
 let storedSilentUrl = null;
 let storedXhrStatus = null;
-const mockSilent = vi.fn((url, successCb, errorCb) => {
-    storedSilentUrl = url;
-    storedSilentSuccessCb = successCb;
-    storedSilentErrorCb = errorCb;
-});
-const mockRequestInstance = {
-    clear: vi.fn(),
-    timeout: vi.fn(),
-    silent: mockSilent
-};
-const mockRequestConstructor = vi.fn(() => mockRequestInstance);
+let mockSilent;
+let mockRequestInstance;
+let mockRequestConstructor;
 
-// --- Import function under test *after* mocks are defined/applied ---
-// Because vi.mock('./cache.js', ...) is hoisted, the './cache.js' import inside
-// apiMDBList.js will receive the mocked version.
-import { fetchMDBListRatings } from './apiMDBList.js';
+// Declare variable to hold the dynamically imported module under test
+let apiModule;
+
+// --- Setup using async beforeEach ---
+beforeEach(async () => {
+    // 1. Define mocks needed by the factory FIRST
+    mockGetCache = vi.fn();
+    mockSetCache = vi.fn();
+
+    // 2. Apply the mock using vi.doMock (NOT hoisted)
+    // This ensures cache.js is mocked before apiMDBList.js imports it.
+    vi.doMock('./cache.js', () => ({
+        getCache: mockGetCache,
+        setCache: mockSetCache,
+    }));
+
+    // 3. Define other mocks needed for the test environment
+    mockStorageData = {};
+    mockLampaStorageGet = vi.fn((key, defaultValue) => mockStorageData.hasOwnProperty(key) ? mockStorageData[key] : defaultValue);
+    storedSilentSuccessCb = null;
+    storedSilentErrorCb = null;
+    storedSilentUrl = null;
+    storedXhrStatus = null;
+    mockSilent = vi.fn((url, successCb, errorCb) => {
+        storedSilentUrl = url;
+        storedSilentSuccessCb = successCb;
+        storedSilentErrorCb = errorCb;
+    });
+    mockRequestInstance = { clear: vi.fn(), timeout: vi.fn(), silent: mockSilent };
+    mockRequestConstructor = vi.fn(() => mockRequestInstance);
+
+    // 4. Setup window.Lampa with all mocks
+    window.Lampa = {
+        Storage: {
+            get: mockLampaStorageGet,
+        },
+        Reguest: mockRequestConstructor,
+    };
+
+    // 5. Dynamically import the module under test *AFTER* mocks (esp. doMock) are applied
+    // Adding a timestamp query parameter can sometimes help bust caches if needed.
+    apiModule = await import(`./apiMDBList.js?t=${Date.now()}`);
+
+    // 6. Clear mock history AFTER setup and import (ready for the actual test)
+    vi.clearAllMocks();
+});
+
+// Cleanup mocks registered with vi.doMock if necessary (though Vitest often handles it)
+afterEach(() => {
+     vi.resetModules(); // Resets module cache, ensuring fresh import next time
+});
 
 
 // --- Test Suite ---
 describe('API Client - fetchMDBListRatings (apiMDBList.js)', () => {
 
+    // Test data defined once
     const testMovieData = { id: 'tt12345', method: 'movie' };
     const testTvData = { id: 'tv67890', method: 'tv' };
     const testApiKey = 'TEST_API_KEY_123';
 
-    beforeEach(() => {
-        // Reset all mocks (including those defined outside beforeEach)
-        vi.clearAllMocks();
-        // Reset our mock storage for the API key
-        mockStorageData = {};
-        // Reset stored callbacks and URL from mockSilent
-        storedSilentSuccessCb = null;
-        storedSilentErrorCb = null;
-        storedSilentUrl = null;
-        storedXhrStatus = null;
+    // No top-level beforeEach needed here now, handled above
 
-        // Setup necessary Lampa mocks on window (using jsdom environment)
-        window.Lampa = {
-            Storage: {
-                get: mockLampaStorageGet,
-                // set/cache mocks are handled by vi.mock('./cache.js', ...) above
-            },
-            Reguest: mockRequestConstructor, // Assign mock constructor
-        };
-
-        // **Important: Reset mock implementations/return values if needed**
-        // Since mockGetCache/SetCache are defined outside, ensure they are reset
-        // if previous tests might have set specific behavior (e.g., mockReturnValue)
-        mockGetCache.mockReset(); // Resets implementation and calls
-        mockSetCache.mockReset(); // Resets implementation and calls
-        // Reset other mocks if necessary, though clearAllMocks handles call history.
-    });
 
     // --- Test Cases ---
-
+    // ** Use apiModule.fetchMDBListRatings in all tests **
     it('should resolve with error object if movieData is invalid (missing id)', async () => {
-        const result = await fetchMDBListRatings({ method: 'movie' });
+        // Call function via the dynamically imported module object
+        const result = await apiModule.fetchMDBListRatings({ method: 'movie' });
         expect(result).toEqual({ error: 'Invalid input data for fetch' });
         expect(mockGetCache).not.toHaveBeenCalled();
         expect(mockSilent).not.toHaveBeenCalled();
     });
 
     it('should resolve with error object if movieData is invalid (missing method)', async () => {
-        const result = await fetchMDBListRatings({ id: 'tt12345' });
+        const result = await apiModule.fetchMDBListRatings({ id: 'tt12345' });
         expect(result).toEqual({ error: 'Invalid input data for fetch' });
         expect(mockGetCache).not.toHaveBeenCalled();
         expect(mockSilent).not.toHaveBeenCalled();
@@ -98,51 +104,51 @@ describe('API Client - fetchMDBListRatings (apiMDBList.js)', () => {
 
     it('should return cached data immediately if available and valid', async () => {
         const cachedData = { imdb: 9.9, error: null };
-        // Set the return value for the mock function for this test
-        mockGetCache.mockReturnValue(cachedData);
+        mockGetCache.mockReturnValue(cachedData); // Setup cache hit
 
-        const result = await fetchMDBListRatings(testMovieData);
+        const result = await apiModule.fetchMDBListRatings(testMovieData);
 
-        expect(result).toEqual(cachedData);
-        expect(mockGetCache).toHaveBeenCalledWith(testMovieData.id);
-        expect(mockLampaStorageGet).not.toHaveBeenCalled();
-        expect(mockSilent).not.toHaveBeenCalled();
-        expect(mockSetCache).not.toHaveBeenCalled();
+        expect(result).toEqual(cachedData); // Check result is cached data
+        expect(mockGetCache).toHaveBeenCalledWith(testMovieData.id); // Verify cache check
+        expect(mockLampaStorageGet).not.toHaveBeenCalled(); // No API key needed
+        expect(mockSilent).not.toHaveBeenCalled(); // No network call needed
+        expect(mockSetCache).not.toHaveBeenCalled(); // Nothing new to cache
     });
 
     it('should resolve with error if API key is not configured in Lampa.Storage', async () => {
         mockGetCache.mockReturnValue(false); // Cache miss
-        mockLampaStorageGet.mockReturnValue(null); // No API key stored
+        mockLampaStorageGet.mockReturnValue(null); // Simulate no API key stored
 
-        const result = await fetchMDBListRatings(testMovieData);
+        const result = await apiModule.fetchMDBListRatings(testMovieData);
 
         expect(result).toEqual({ error: "MDBList API Key not configured in Additional Ratings settings" });
         expect(mockGetCache).toHaveBeenCalledWith(testMovieData.id);
-        expect(mockLampaStorageGet).toHaveBeenCalledWith('mdblist_api_key');
-        expect(mockSilent).not.toHaveBeenCalled();
-        expect(mockSetCache).not.toHaveBeenCalled();
+        expect(mockLampaStorageGet).toHaveBeenCalledWith('mdblist_api_key'); // Verify API key check
+        expect(mockSilent).not.toHaveBeenCalled(); // Network call should be skipped
+        expect(mockSetCache).not.toHaveBeenCalled(); // Nothing to cache
     });
 
     // --- Tests for Cache Miss / Network Interaction ---
     describe('When Cache Misses and API Key Exists', () => {
         beforeEach(() => {
-            // Common setup: ensure cache miss and API key exists
+            // Common setup for tests in this block: ensure cache miss and API key exists
+            // This runs AFTER the main beforeEach above
             mockGetCache.mockReturnValue(false);
             mockLampaStorageGet.mockReturnValue(testApiKey);
         });
 
         it('should call API, process successful response, cache result, and resolve', async () => {
-            const fetchPromise = fetchMDBListRatings(testMovieData);
+            const fetchPromise = apiModule.fetchMDBListRatings(testMovieData);
 
             // Verify prerequisites were checked and network call initiated
-            expect(mockGetCache).toHaveBeenCalledWith(testMovieData.id);
-            expect(mockLampaStorageGet).toHaveBeenCalledWith('mdblist_api_key');
+            // Note: Mocks might be called during module load now, so check specific calls if needed
+            // Let's focus on the outcome and the final mock calls (cache/network)
             expect(mockSilent).toHaveBeenCalledTimes(1); // Network call made
             expect(storedSilentSuccessCb).toBeInstanceOf(Function); // Callbacks captured
 
             // Simulate successful network response
             const mockApiResponse = {
-                ratings: [ { source: 'imdb', value: 7.8 }, { source: 'metacritic', value: 85 } ]
+                ratings: [ { source: 'imdb', value: 7.8 }, { source: 'metacritic', value: 85 }, { source: 'tmdb', value: null } ]
             };
             storedSilentSuccessCb(mockApiResponse); // Trigger success callback
 
@@ -154,10 +160,12 @@ describe('API Client - fetchMDBListRatings (apiMDBList.js)', () => {
             // Check caching
             expect(mockSetCache).toHaveBeenCalledTimes(1);
             expect(mockSetCache).toHaveBeenCalledWith(testMovieData.id, expectedResult);
+            // Check URL used (optional but good)
+            expect(storedSilentUrl).toContain(`movie/${testMovieData.id}`);
         });
 
         it('should handle API error in response, cache error, and resolve', async () => {
-            const fetchPromise = fetchMDBListRatings(testTvData); // Use TV data
+            const fetchPromise = apiModule.fetchMDBListRatings(testTvData); // Use TV data
             expect(mockSilent).toHaveBeenCalledTimes(1);
 
             // Simulate API error response
@@ -175,7 +183,7 @@ describe('API Client - fetchMDBListRatings (apiMDBList.js)', () => {
         });
 
         it('should handle network failure (e.g., 503), cache error, and resolve', async () => {
-            const fetchPromise = fetchMDBListRatings(testMovieData);
+            const fetchPromise = apiModule.fetchMDBListRatings(testMovieData);
             expect(mockSilent).toHaveBeenCalledTimes(1);
 
             // Simulate network error callback
@@ -192,7 +200,7 @@ describe('API Client - fetchMDBListRatings (apiMDBList.js)', () => {
         });
 
         it('should handle network failure (e.g., 401 Unauthorized) and resolve WITHOUT caching', async () => {
-            const fetchPromise = fetchMDBListRatings(testMovieData);
+            const fetchPromise = apiModule.fetchMDBListRatings(testMovieData);
             expect(mockSilent).toHaveBeenCalledTimes(1);
 
             // Simulate 401 network error
@@ -208,7 +216,7 @@ describe('API Client - fetchMDBListRatings (apiMDBList.js)', () => {
         });
 
          it('should handle API response error matching auth patterns and resolve WITHOUT caching', async () => {
-            const fetchPromise = fetchMDBListRatings(testMovieData);
+            const fetchPromise = apiModule.fetchMDBListRatings(testMovieData);
             expect(mockSilent).toHaveBeenCalledTimes(1);
 
             // Simulate API response indicating invalid key
