@@ -1,4 +1,4 @@
-// SRC/settings.test.js
+// SRC/settings.test.js 
 import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Import the function to test
