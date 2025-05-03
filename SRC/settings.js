@@ -1,5 +1,6 @@
 // SRC/settings.js
 'use strict';
+console.log("PsahxRatingsPlugin: Executing settings.js");
 
 // Note: This module primarily interacts with Lampa APIs (SettingsApi, Lang, Storage, Select, Controller)
 // It doesn't directly import our other custom modules like config or cache,
