@@ -96,7 +96,6 @@ export function registerSettings() {
             name: 'mdblist_api_key',          // Storage key for the API key
             type: 'input',                   // Input field type
             'default': '',                   // Default value (empty string)
-             values: {},
             placeholder: 'Enter your MDBList API Key' // Placeholder text
         },
         field: {
