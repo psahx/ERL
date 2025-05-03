@@ -105,12 +105,15 @@ export function injectStyles() {
          return;
     }
 
+// Inject the styles using try...catch for safety
     try {
-       // Add the template to Lampa
-       Lampa.Template.add(style_id, \`<style data-id="\${style_id}">\${cssString}</style>\`);
-       // Append the rendered template to the body (or head)
+       // Add the style content to Lampa's template system
+       Lampa.Template.add(style_id, `<style data-id="${style_id}">${cssString}</style>`);       
        $('body').append(Lampa.Template.get(style_id, {}, true));
        // Optional: console.log("PsahxRatingsPlugin: Styles injected.");
     } catch (e) {
        console.error("PsahxRatingsPlugin [styles.js]: Error injecting styles:", e);
-    }
+    } // <-- End of catch block
+} // <-- End of injectStyles function definition
+
+// <-- ENSURE THERE IS ABSOLUTELY NOTHING AFTER THIS LINE -->
