@@ -1,5 +1,6 @@
 // SRC/main.js
 'use strict';
+console.log("PsahxRatingsPlugin: Executing main.js");
 
 // --- Import necessary setup functions and the main UI component handler ---
 // Adjust paths if needed (e.g., use full URLs if relative paths fail)
