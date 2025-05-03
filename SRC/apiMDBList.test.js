@@ -3,16 +3,23 @@ import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 // --- Mock dependencies ---
 
-// Declare variables for mock functions - they will be defined in beforeEach BEFORE doMock
-let mockGetCache;
-let mockSetCache;
+// Define variables for mock functions FIRST.
+const mockGetCache = vi.fn();
+const mockSetCache = vi.fn();
 
-// Mock config (importing real one - fine as it doesn't interact with hoisting issue)
+// Use vi.doMock (NOT hoisted) AFTER declaring variables it needs.
+// This MUST run before apiMDBList.js is imported.
+vi.doMock('./cache.js', () => ({
+    getCache: mockGetCache,
+    setCache: mockSetCache,
+}));
+
+// Mock config (importing real one)
 import { config } from './config.js';
 
-// Mock Lampa APIs (declare vars, define in beforeEach)
-let mockStorageData = {};
-let mockLampaStorageGet;
+// Mock Lampa APIs
+let mockStorageData = {}; // For Lampa.Storage.get (API Key)
+let mockLampaStorageGet; // Assigned in beforeEach
 let storedSilentSuccessCb = null;
 let storedSilentErrorCb = null;
 let storedSilentUrl = null;
@@ -26,18 +33,12 @@ let apiModule;
 
 // --- Setup using async beforeEach ---
 beforeEach(async () => {
-    // 1. Define mocks needed by the factory FIRST
-    mockGetCache = vi.fn();
-    mockSetCache = vi.fn();
+    // 1. Reset mocks defined outside this scope (or define them here)
+    vi.clearAllMocks(); // Clear call history etc first
+    mockGetCache.mockReset(); // Reset implementation and calls for mocks used in doMock factory
+    mockSetCache.mockReset();
 
-    // 2. Apply the mock using vi.doMock (NOT hoisted)
-    // This ensures cache.js is mocked before apiMDBList.js imports it.
-    vi.doMock('./cache.js', () => ({
-        getCache: mockGetCache,
-        setCache: mockSetCache,
-    }));
-
-    // 3. Define other mocks needed for the test environment
+    // 2. Define other mocks needed for the test environment
     mockStorageData = {};
     mockLampaStorageGet = vi.fn((key, defaultValue) => mockStorageData.hasOwnProperty(key) ? mockStorageData[key] : defaultValue);
     storedSilentSuccessCb = null;
@@ -52,7 +53,7 @@ beforeEach(async () => {
     mockRequestInstance = { clear: vi.fn(), timeout: vi.fn(), silent: mockSilent };
     mockRequestConstructor = vi.fn(() => mockRequestInstance);
 
-    // 4. Setup window.Lampa with all mocks
+    // 3. Setup window.Lampa with all mocks
     window.Lampa = {
         Storage: {
             get: mockLampaStorageGet,
@@ -60,17 +61,15 @@ beforeEach(async () => {
         Reguest: mockRequestConstructor,
     };
 
-    // 5. Dynamically import the module under test *AFTER* mocks (esp. doMock) are applied
-    // Adding a timestamp query parameter can sometimes help bust caches if needed.
-    apiModule = await import(`./apiMDBList.js?t=${Date.now()}`);
+    // 4. Dynamically import the module under test *AFTER* mocks are applied
+    // ** Use a clean relative path WITHOUT the query string **
+    apiModule = await import('./apiMDBList.js'); // <-- Query string removed
 
-    // 6. Clear mock history AFTER setup and import (ready for the actual test)
-    vi.clearAllMocks();
 });
 
-// Cleanup mocks registered with vi.doMock if necessary (though Vitest often handles it)
+// Cleanup mocks registered with vi.doMock after each test
 afterEach(() => {
-     vi.resetModules(); // Resets module cache, ensuring fresh import next time
+     vi.resetModules(); // Resets module cache, important when using vi.doMock
 });
 
 
@@ -81,9 +80,6 @@ describe('API Client - fetchMDBListRatings (apiMDBList.js)', () => {
     const testMovieData = { id: 'tt12345', method: 'movie' };
     const testTvData = { id: 'tv67890', method: 'tv' };
     const testApiKey = 'TEST_API_KEY_123';
-
-    // No top-level beforeEach needed here now, handled above
-
 
     // --- Test Cases ---
     // ** Use apiModule.fetchMDBListRatings in all tests **
@@ -138,11 +134,12 @@ describe('API Client - fetchMDBListRatings (apiMDBList.js)', () => {
         });
 
         it('should call API, process successful response, cache result, and resolve', async () => {
+            // Initiate the fetch (returns a Promise)
             const fetchPromise = apiModule.fetchMDBListRatings(testMovieData);
 
             // Verify prerequisites were checked and network call initiated
-            // Note: Mocks might be called during module load now, so check specific calls if needed
-            // Let's focus on the outcome and the final mock calls (cache/network)
+            expect(mockGetCache).toHaveBeenCalledWith(testMovieData.id);
+            expect(mockLampaStorageGet).toHaveBeenCalledWith('mdblist_api_key');
             expect(mockSilent).toHaveBeenCalledTimes(1); // Network call made
             expect(storedSilentSuccessCb).toBeInstanceOf(Function); // Callbacks captured
 
@@ -233,3 +230,4 @@ describe('API Client - fetchMDBListRatings (apiMDBList.js)', () => {
         });
     }); // End describe 'When Cache Misses...'
 }); // End top-level describe
+
