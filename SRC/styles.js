@@ -114,4 +114,3 @@ export function injectStyles() {
     } catch (e) {
        console.error("PsahxRatingsPlugin [styles.js]: Error injecting styles:", e);
     }
-}
