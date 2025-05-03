@@ -105,7 +105,7 @@ export function registerSettings() {
             // Optional: Define actions when the API key changes.
             // Lampa.Settings.update(); // May be needed if other parts react to settings changes via Lampa's system
             // Consider if clearing the cache is desired here:
-            // import('./cache.js').then(cache => cache.setCache(/* how to clear? need specific function */));
+            // import('https://psahx.github.io/ERL/SRC/cache.js').then(cache => cache.setCache(/* how to clear? need specific function */));
             // Requires async handling or a synchronous clear function in cache module. For now, do nothing extra.
         }
     });
