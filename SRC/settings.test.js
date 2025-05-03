@@ -156,21 +156,37 @@ describe('Settings Registration and Interaction (settings.js)', () => {
             expect(mockItem.checked).toBe(false); // Item state updated visually
         });
 
-        it('should call Lampa.Controller.toggle with correct controller when onBack is called', () => {
-             // Arrange: Simulate button click
-             buttonOnChange();
-             const selectOptions = mockSelectShow.mock.calls[0][0];
-             const onBackCallback = selectOptions.onBack;
-             // Arrange: Set what Lampa.Controller.enabled() should return
-             const expectedControllerName = 'settings';
-             mockControllerEnabled.mockReturnValue({ name: expectedControllerName });
 
-             // Action: Call the onBack callback
-             onBackCallback();
+        it('should call Lampa.Controller.toggle when onBack is called', () => {
+     // Arrange: Simulate button click to get callbacks
+     registerSettings();
+     const buttonOnChange = mockSettingsApiAddParam.mock.calls.find(call => call[0]?.param?.name === 'select_ratings_button')[0]?.onChange;
+     buttonOnChange(); // Trigger Select.show to register callbacks passed to the mock
 
-             // Assertions
-             expect(mockControllerToggle).toHaveBeenCalledTimes(1);
-             expect(mockControllerToggle).toHaveBeenCalledWith(expectedControllerName);
+     // Ensure Lampa.Select.show mock was called
+     expect(mockSelectShow).toHaveBeenCalled();
+     const selectOptions = mockSelectShow.mock.calls[0][0];
+     const onBackCallback = selectOptions.onBack;
+     expect(onBackCallback).toBeInstanceOf(Function); // Ensure we have the callback
+
+     // Arrange: Define the expected controller name
+     const expectedControllerName = 'settings';
+     // Arrange: **Set the mock return value JUST before the action**
+     mockControllerEnabled.mockReturnValue({ name: expectedControllerName });
+
+     // Action: Call the onBack callback
+     onBackCallback();
+
+     // Assertions
+     expect(mockControllerToggle).toHaveBeenCalledTimes(1); // Verify it was called once
+
+     // **DEBUG:** Log the actual arguments received by the mock
+     const actualArgs = mockControllerToggle.mock.calls[0];
+     console.log('DEBUG: mockControllerToggle called with:', actualArgs);
+
+     // Final check: Verify it was called with the expected argument
+     expect(mockControllerToggle).toHaveBeenCalledWith(expectedControllerName);
+        
         });
     });
 });
