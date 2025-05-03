@@ -8,33 +8,19 @@ import { registerSettings } from './settings.js';
 import { injectStyles } from './styles.js';
 import { InfoPanelHandler } from './uiInfoPanel.js'; // Import the exported class/function
 
-// ============================================================================
-// == PASTE THE ENTIRE 'component' FUNCTION DEFINITION FROM YOUR ORIGINAL    ==
-// == SCRIPT HERE.                                                           ==
-// ==                                                                          ==
-// == IMPORTANT: Inside the 'component' function, find the line(s) where     ==
-// ==   'info' is created (likely in 'this.create' or 'this.build'):          ==
-// ==   info = new create(object);                                             ==
-// == AND CHANGE IT TO use the imported handler name:                          ==
-// ==   info = new InfoPanelHandler(object);                                   ==
-// ==                                                                          ==
-// == Also, ensure the 'destroy' method within 'component' calls:            ==
-// ==   if (info) info.destroy();                                             ==
-// ============================================================================
-
-function component(object) { // <-- START OF PASTED 'component' FUNCTION
-    // Example start (replace with your full 'component' code):
+function component(object) { 
+    
     var network = new Lampa.Reguest();
     var scroll = new Lampa.Scroll({ mask: true, over: true, scroll_by_item: true });
     var items = [];
     var html = $('<div class="new-interface"><img class="full-start__background"></div>');
     var active = 0;
     // Check for Lampa.Manifest existence before accessing app_digital
-    var newlampa = window.Lampa && Lampa.Manifest && Lampa.Manifest.app_digital >= 166;
+    var newlampa = Lampa.Manifest.app_digital >= 166;
     var info; // Will hold the InfoPanelHandler instance
     var lezydata;
     // Check for Lampa.Storage existence before accessing field
-    var viewall = window.Lampa && Lampa.Storage && (Lampa.Storage.field('card_views_type') == 'view' || Lampa.Storage.field('navigation_type') == 'mouse');
+    var viewall = Lampa.Storage.field('card_views_type') == 'view' || Lampa.Storage.field('navigation_type') == 'mouse';
     var background_img = html.find('.full-start__background');
     var background_last = '';
     var background_timer;
@@ -51,47 +37,194 @@ function component(object) { // <-- START OF PASTED 'component' FUNCTION
          scroll.minus(info.render());
      };
 
-    // --- PASTE THE REST of the 'component' methods here ---
-    // this.build = function (data) { /* PASTE ORIGINAL, ensure info exists */ };
-    // this.empty = function () { /* PASTE ORIGINAL */ };
-    // this.loadNext = function () { /* PASTE ORIGINAL */ };
-    // this.push = function () { /* PASTE ORIGINAL */ };
-    // this.background = function (elem) { /* PASTE ORIGINAL */ };
-    // this.append = function (element) { /* PASTE ORIGINAL */ };
-    // this.back = function () { /* PASTE ORIGINAL */ };
-    // this.down = function () { /* PASTE ORIGINAL */ };
-    // this.up = function () { /* PASTE ORIGINAL */ };
-    // this.start = function () { /* PASTE ORIGINAL */ };
-    // this.refresh = function () { /* PASTE ORIGINAL */ };
-    // this.pause = function () { /* PASTE ORIGINAL */ };
-    // this.stop = function () { /* PASTE ORIGINAL */ };
-    // this.render = function () { return html; };
-    // this.destroy = function () {
-    //     /* PASTE ORIGINAL 'destroy' CODE */
-    //     // --- CRITICAL: Ensure this line is present ---
-    //     if (info) info.destroy();
-    //     // --- End Critical Line ---
-    //     /* ... rest of original destroy ... */
-    // };
-    // --- Example placeholders ---
-     this.build = function (data) { /* PASTE ORIGINAL build CODE */ };
-     this.empty = function () { /* PASTE ORIGINAL empty CODE */ };
-     this.loadNext = function () { /* PASTE ORIGINAL loadNext CODE */ };
-     this.push = function () { /* PASTE ORIGINAL push CODE */ };
-     this.background = function (elem) { /* PASTE ORIGINAL background CODE */ };
-     this.append = function (element) { /* PASTE ORIGINAL append CODE */ };
-     this.back = function () { /* PASTE ORIGINAL back CODE */ };
-     this.down = function () { /* PASTE ORIGINAL down CODE */ };
-     this.up = function () { /* PASTE ORIGINAL up CODE */ };
-     this.start = function () { /* PASTE ORIGINAL start CODE */ };
-     this.refresh = function () { /* PASTE ORIGINAL refresh CODE */ };
-     this.pause = function () { /* PASTE ORIGINAL pause CODE */ };
-     this.stop = function () { /* PASTE ORIGINAL stop CODE */ };
-     this.render = function () { return html; };
-     this.destroy = function () { /* PASTE ORIGINAL destroy CODE, ensure 'if(info) info.destroy();' is included */ };
-
-} // --- END OF PASTED 'component' FUNCTION ---
-
+    this.empty = function () {
+        /* Original empty code */ 
+        var button; if (object.source == 'tmdb') { 
+            button = $('<div class="empty__footer"><div class="simple-button selector">' + Lampa.Lang.translate('change_source_on_cub') + '</div></div>'); 
+            button.find('.selector').on('hover:enter', 
+                function () { Lampa.Storage.set('source', 'cub'); 
+                    Lampa.Activity.replace({ source: 'cub' }); }); 
+        } 
+        var empty = new Lampa.Empty(); 
+        html.append(empty.render(button)); 
+        
+        this.start = empty.start; 
+        this.activity.loader(false); 
+        this.activity.toggle(); 
+    }; 
+    
+    this.loadNext = function () { 
+        var _this = this; 
+        if (this.next && !this.next_wait && items.length) { 
+            this.next_wait = true; this.next(function (new_data) { 
+                _this.next_wait = false; 
+                new_data.forEach(_this.append.bind(_this)); 
+                Lampa.Layer.visible(items[active + 1].render(true)); 
+                }, 
+            function () { 
+                _this.next_wait = false; 
+                }); 
+        } 
+    }; 
+            
+    this.push = function () {}; 
+    this.build = function (data) { 
+        var _this2 = this; 
+        lezydata = data; 
+        info = new create(object); 
+        info.create(); 
+        scroll.minus(info.render()); 
+        data.slice(0, viewall ? data.length : 2).forEach(this.append.bind(this)); 
+        html.append(info.render()); html.append(scroll.render()); 
+        if (newlampa) { 
+            Lampa.Layer.update(html); 
+            Lampa.Layer.visible(scroll.render(true)); 
+            scroll.onEnd = this.loadNext.bind(this); 
+            scroll.onWheel = function (step) { 
+                if (!Lampa.Controller.own(_this2)) _this2.start(); 
+                if (step > 0) _this2.down(); else if (active > 0) _this2.up(); 
+            }; 
+        } 
+        if (items.length > 0 && items[0] && items[0].data) { 
+            active = 0; 
+            info.update(items[active].data); 
+            this.background(items[active].data); 
+        } 
+        this.activity.loader(false); 
+        this.activity.toggle(); 
+    }; 
+    
+    this.background = function (elem) {
+        if (!elem || !elem.backdrop_path) return; 
+        var new_background = Lampa.Api.img(elem.backdrop_path, 'w1280'); 
+        clearTimeout(background_timer); 
+        if (new_background == background_last) return; 
+        background_timer = setTimeout(function () { 
+            background_img.removeClass('loaded'); 
+            background_img[0].onload = function () { 
+                background_img.addClass('loaded'); 
+            }; 
+            background_img[0].onerror = function () { 
+                background_img.removeClass('loaded'); 
+            }; 
+            background_last = new_background; 
+            setTimeout(function () { 
+                if (background_img[0]) background_img[0].src = background_last; 
+            }, 300); 
+        }, 1000); 
+    }; 
+    
+    this.append = function (element) { 
+        if (element.ready) return; 
+        var _this3 = this; 
+        element.ready = true; 
+        var item = new Lampa.InteractionLine(element, { 
+            url: element.url, 
+            card_small: true, 
+            cardClass: element.cardClass, 
+            genres: object.genres, 
+            object: object, 
+            card_wide: true, 
+            nomore: element.nomore 
+        }); 
+        item.create(); 
+        item.onDown = this.down.bind(this); 
+        item.onUp = this.up.bind(this); 
+        item.onBack = this.back.bind(this); 
+        item.onToggle = function () { 
+            active = items.indexOf(item); 
+        }; 
+        if (this.onMore) item.onMore = this.onMore.bind(this); 
+        item.onFocus = function (elem) { 
+            if (!elem.method) elem.method = elem.name ? 'tv' : 'movie'; info.update(elem); _this3.background(elem); 
+        }; 
+        item.onHover = function (elem) { 
+            if (!elem.method) elem.method = elem.name ? 'tv' : 'movie'; info.update(elem); 
+            _this3.background(elem); 
+        }; 
+        item.onFocusMore = info.empty.bind(info); 
+        scroll.append(item.render()); 
+        items.push(item); 
+    }; 
+    
+    this.back = function () { 
+        Lampa.Activity.backward(); 
+    }; 
+    
+    this.down = function () { 
+        active++; 
+        active = Math.min(active, items.length - 1); 
+        if (!viewall && lezydata) lezydata.slice(0, active + 2).forEach(this.append.bind(this)); 
+        items[active].toggle(); 
+        scroll.update(items[active].render()); 
+    }; 
+    
+    this.up = function () { 
+        active--; 
+        if (active < 0) { 
+            active = 0; Lampa.Controller.toggle('head'); 
+        } 
+        else { 
+            items[active].toggle(); 
+            scroll.update(items[active].render()); 
+        } 
+    }; 
+    
+    this.start = function () {
+        var _this4 = this; 
+        Lampa.Controller.add('content', { 
+            link: this, toggle: function toggle() { 
+                if (_this4.activity.canRefresh()) return false; 
+                if (items.length) { 
+                    items[active].toggle(); 
+                } 
+            }, 
+            update: function update() {}, 
+            left: function left() { 
+                if (Navigator.canmove('left')) Navigator.move('left'); 
+                else Lampa.Controller.toggle('menu'); 
+            }, 
+            right: function right() { 
+                Navigator.move('right'); 
+            }, 
+            up: function up() { 
+                if (Navigator.canmove('up')) Navigator.move('up'); 
+                else Lampa.Controller.toggle('head'); 
+            }, 
+            down: function down() { 
+                if (Navigator.canmove('down')) Navigator.move('down'); 
+            }, 
+            back: this.back 
+        }); 
+        Lampa.Controller.toggle('content'); 
+    }; 
+    
+    this.refresh = function () { 
+        this.activity.loader(true); 
+        this.activity.need_refresh = true; 
+    }; 
+    
+    this.pause = function () {}; 
+    this.stop = function () {}; 
+    this.render = function () { 
+        return html; 
+    }; 
+    
+    this.destroy = function () { 
+        clearTimeout(background_timer); 
+        network.clear(); 
+        Lampa.Arrays.destroy(items); 
+        scroll.destroy(); 
+        if (info) info.destroy(); 
+        if (html) html.remove(); 
+        items = null; 
+        network = null; 
+        lezydata = null; 
+        info = null; 
+        html = null; 
+    }; 
+}
+ // --- END OF PASTED 'component' FUNCTION ---
 
 /**
  * Main asynchronous initialization function for the plugin.
