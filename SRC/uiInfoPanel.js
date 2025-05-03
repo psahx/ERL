@@ -1,5 +1,6 @@
 // SRC/uiInfoPanel.js
 'use strict';
+console.log("PsahxRatingsPlugin: Executing uiInfoPanel.js");
 
 // FIX 1: Import the fetch function from our API client module
 import { fetchMDBListRatings } from 'https://psahx.github.io/ERL/SRC/apiMDBList.js';
