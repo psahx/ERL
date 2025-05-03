@@ -29,7 +29,7 @@ let mockJquery; // Mock for the global $ function
 let mockJqueryInstance; // Mock for the object returned by $()
 
 // Variable to hold the dynamically imported module's handler
-let InfoPanelHandler;
+let InfoPanelHandler; // Use the actual exported name
 
 // --- Setup Test Environment ---
 beforeEach(async () => {
@@ -74,7 +74,6 @@ beforeEach(async () => {
     window.Lampa = {
         Lang: { translate: mockLangTranslate },
         Storage: { get: mockStorageGet, field: mockStorageField, // Mock methods used by InfoPanel AND component
-                   // Add dummy cache/set if implicitly needed by Storage.field perhaps
                    cache: vi.fn(()=>({})), set: vi.fn() },
         Api: {
             img: mockApiImg,
@@ -97,7 +96,8 @@ beforeEach(async () => {
     window.$ = mockJquery; // Assign mock jQuery
 
     // **Dynamically import the module under test AFTER mocks are set up**
-    const module = await import(`./uiInfoPanel.js?t=${Date.now()}`);
+    // ** REMOVE the cache-busting query string **
+    const module = await import('./uiInfoPanel.js'); // <-- Query string removed
     InfoPanelHandler = module.InfoPanelHandler; // Assign the exported class/function
 
     // Clear mock history AFTER setup and import
@@ -122,14 +122,10 @@ describe('InfoPanelHandler (uiInfoPanel.js)', () => {
         handler.create();
 
         // Assertions
-        // Check jQuery was called to create the div
         expect(mockJquery).toHaveBeenCalledTimes(1);
         expect(mockJquery).toHaveBeenCalledWith(expect.stringContaining('<div class="new-interface-info">'));
-
-        // Check internal state initialization
         expect(handler.mdblistRatingsCache).toEqual({});
         expect(handler.mdblistRatingsPending).toEqual({});
-        // Note: We can't easily check 'loadedTmdbData' as it's not a 'this.' property
     });
 
     it('update() should reset UI elements via jQuery', () => {
@@ -140,13 +136,12 @@ describe('InfoPanelHandler (uiInfoPanel.js)', () => {
          // Action
          handler.update(testMovieData);
 
-         // Assertions - check calls to jQuery methods for UI reset
+         // Assertions
          expect(mockJqueryInstance.find).toHaveBeenCalledWith('.new-interface-info__head,.new-interface-info__details');
          expect(mockJqueryInstance.find).toHaveBeenCalledWith('.new-interface-info__title');
          expect(mockJqueryInstance.find).toHaveBeenCalledWith('.new-interface-info__description');
-         expect(mockJqueryInstance.text).toHaveBeenCalledWith('---'); // Default reset text
+         expect(mockJqueryInstance.text).toHaveBeenCalledWith('---');
          expect(mockJqueryInstance.text).toHaveBeenCalledWith(testMovieData.title);
-         // Check translation fallback (assuming mockLangTranslate returns the key)
          expect(mockJqueryInstance.text).toHaveBeenCalledWith(testMovieData.overview);
     });
 
@@ -158,34 +153,26 @@ describe('InfoPanelHandler (uiInfoPanel.js)', () => {
 
          // Assertions
          expect(mockBackgroundChange).toHaveBeenCalledTimes(1);
-         // Check Lampa.Api.img was called to get the path
          expect(mockApiImg).toHaveBeenCalledWith(testMovieData.backdrop_path, 'w200');
-         // Check Background.change was called with the result from Api.img
          expect(mockBackgroundChange).toHaveBeenCalledWith(`mock/img/${testMovieData.backdrop_path}?size=w200`);
     });
 
     it('update() should call fetchMDBListRatings and then this.load() on success', async () => {
         const handler = new InfoPanelHandler(mockObjectArg);
         handler.create();
-        // Spy on the instance's 'load' method BEFORE calling 'update'
         const loadSpy = vi.spyOn(handler, 'load');
-        // Mock the fetch to return a resolved promise
         const mockFetchResult = { imdb: 7.0, error: null };
         mockFetchMDBListRatings.mockResolvedValue(mockFetchResult);
 
         // Action
-        await handler.update(testMovieData); // Use await as fetch is async
+        await handler.update(testMovieData); // Use await
 
         // Assertions
-        // Check fetch was called correctly
         expect(mockFetchMDBListRatings).toHaveBeenCalledTimes(1);
         expect(mockFetchMDBListRatings).toHaveBeenCalledWith(testMovieData);
-
-        // Check internal state updated after fetch resolves
+        // Wait for promise resolution implicitly handled by await before checking state
         expect(handler.mdblistRatingsCache[testMovieData.id]).toEqual(mockFetchResult);
         expect(handler.mdblistRatingsPending[testMovieData.id]).toBeUndefined();
-
-        // Check load was called AFTER fetch promise resolved
         expect(loadSpy).toHaveBeenCalledTimes(1);
         expect(loadSpy).toHaveBeenCalledWith(testMovieData);
     });
@@ -194,76 +181,67 @@ describe('InfoPanelHandler (uiInfoPanel.js)', () => {
         const handler = new InfoPanelHandler(mockObjectArg);
         handler.create();
         const loadSpy = vi.spyOn(handler, 'load');
-        // No need to mock fetch return value here as it shouldn't be called
 
-        // Action with invalid data (missing id)
-        const invalidData = { method:'movie', title: 'Invalid' };
+        // Action with invalid data
+        const invalidData = { title: 'Invalid', overview: 'No ID' };
         await handler.update(invalidData);
 
         // Assertions
-        expect(mockFetchMDBListRatings).not.toHaveBeenCalled(); // Fetch should NOT be called
-        expect(loadSpy).toHaveBeenCalledTimes(1); // Load should be called directly
+        expect(mockFetchMDBListRatings).not.toHaveBeenCalled();
+        expect(loadSpy).toHaveBeenCalledTimes(1);
         expect(loadSpy).toHaveBeenCalledWith(invalidData);
     });
 
     it('load() should call TMDB API via network and then this.draw() on success', () => {
         const handler = new InfoPanelHandler(mockObjectArg);
         handler.create();
-        // Spy on the instance's 'draw' method
         const drawSpy = vi.spyOn(handler, 'draw');
 
-        // Action: Call load, which should trigger the network request setup
+        // Action
         handler.load(testMovieData);
 
-        // Assert: Network call was initiated
+        // Assert: Network call initiated
         expect(mockTmdbNetworkSilent).toHaveBeenCalledTimes(1);
-        // Extract the success callback captured by the mock
         const tmdbSuccessCallback = mockTmdbNetworkSilent.mock.calls[0][1];
         expect(tmdbSuccessCallback).toBeInstanceOf(Function);
 
-        // Arrange: Define mock TMDB response data
+        // Arrange: Mock TMDB response
         const mockTmdbResponse = { ...testMovieData, vote_average: 8.5, genres: [{name: 'Action'}] };
 
-        // Action: Manually trigger the success callback
+        // Action: Trigger success callback
         tmdbSuccessCallback(mockTmdbResponse);
 
-        // Assert: Check if 'draw' was called with the TMDB response data
+        // Assert: Check 'draw' call
         expect(drawSpy).toHaveBeenCalledTimes(1);
         expect(drawSpy).toHaveBeenCalledWith(mockTmdbResponse);
-        // Check TMDB API URL construction
+        // Assert: Check TMDB API URL construction details
         expect(mockTmdbApi).toHaveBeenCalledWith(expect.stringContaining(`movie/${testMovieData.id}`));
         expect(mockTmdbKey).toHaveBeenCalled();
     });
 
-    it('load() should use internal TMDB cache and call draw() without network request if data exists', () => {
+     it('load() should use internal TMDB cache and call draw() without network request if data exists', () => {
         const handler = new InfoPanelHandler(mockObjectArg);
         handler.create();
         const drawSpy = vi.spyOn(handler, 'draw');
         const mockTmdbResponse = { ...testMovieData, vote_average: 8.5 };
 
-        // Arrange: Pre-populate internal TMDB cache by calling load once and simulating success
+        // Arrange: Call load once and simulate success to populate internal cache
         handler.load(testMovieData);
         expect(mockTmdbNetworkSilent).toHaveBeenCalledTimes(1);
-        mockTmdbNetworkSilent.mock.calls[0][1](mockTmdbResponse); // Trigger success, populates cache, calls draw once
+        mockTmdbNetworkSilent.mock.calls[0][1](mockTmdbResponse); // Trigger success
         expect(drawSpy).toHaveBeenCalledTimes(1);
-        drawSpy.mockClear(); // Clear spy calls from the setup phase
-        vi.clearAllMocks(); // Clear network mock calls from setup
+        drawSpy.mockClear(); // Clear spy history
+        vi.clearAllMocks(); // Clear network mock history
 
-        // Action: Call load again with the same data
+        // Action: Call load again
         handler.load(testMovieData);
 
-        // Assert: Network should NOT have been called this time
+        // Assert: Network not called, draw called with cached data
         expect(mockTmdbNetworkSilent).not.toHaveBeenCalled();
-        // Assert: draw should have been called immediately with the cached TMDB data
         expect(drawSpy).toHaveBeenCalledTimes(1);
         expect(drawSpy).toHaveBeenCalledWith(mockTmdbResponse);
     });
 
-    // Add more tests later for:
-    // - Error handling in update() if fetch promise rejects unexpectedly
-    // - Error handling in load() if TMDB network call fails
-    // - destroy() method cleaning up timers, removing HTML etc.
-    // - draw() method basic checks (e.g., calls find/html) - deeper checks deferred
+    // Add more tests later
 
 }); // End describe InfoPanelHandler
-
