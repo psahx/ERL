@@ -2,7 +2,7 @@
 'use strict';
 
 // Import the configuration settings
-import { config } from './config.js';
+import { config } from 'https://psahx.github.io/ERL/SRC/config.js';
 
 /**
  * Retrieves rating data from cache if available and not expired.
