@@ -1,6 +1,5 @@
-// .SRC/settings.js
+// SRC/settings.js
 'use strict';
-console.log("PsahxRatingsPlugin: Executing settings.js");
 
 // Note: This module primarily interacts with Lampa APIs (SettingsApi, Lang, Storage, Select, Controller)
 // It doesn't directly import our other custom modules like config or cache,
@@ -96,7 +95,6 @@ export function registerSettings() {
             name: 'mdblist_api_key',          // Storage key for the API key
             type: 'input',                   // Input field type
             'default': '',                   // Default value (empty string)
-            values: {},
             placeholder: 'Enter your MDBList API Key' // Placeholder text
         },
         field: {
