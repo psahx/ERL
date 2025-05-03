@@ -1,5 +1,5 @@
-// SRC/settings.test.js 
-import { describe, it, expect, beforeEach, vi } from 'vitest';
+// SRC/settings.test.js
+import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
 
 // Import the function to test
 import { registerSettings } from './settings.js';
@@ -7,28 +7,34 @@ import { registerSettings } from './settings.js';
 // --- Mock Lampa Environment ---
 let mockStorageData = {}; // Simulate Lampa.Storage data
 
-// Create mock functions for Lampa APIs using Vitest spies (vi.fn)
-const mockLangTranslate = vi.fn(key => `translated_${key}`); // Return predictable string
-const mockSettingsApiAddComponent = vi.fn();
-const mockSettingsApiAddParam = vi.fn();
-const mockStorageGet = vi.fn((key, defaultValue) => mockStorageData.hasOwnProperty(key) ? mockStorageData[key] : defaultValue);
-const mockStorageSet = vi.fn((key, value) => { mockStorageData[key] = value; });
-const mockSelectShow = vi.fn(); // Mock for Lampa.Select.show
-const mockControllerEnabled = vi.fn(() => ({ name: 'mock_controller' })); // Simulate getting current controller
-const mockControllerToggle = vi.fn();
+// Declare variables for mock functions - they will be assigned fresh in beforeEach
+let mockLangTranslate;
+let mockSettingsApiAddComponent;
+let mockSettingsApiAddParam;
+let mockStorageGet;
+let mockStorageSet;
+let mockSelectShow;
+let mockControllerEnabled;
+let mockControllerToggle;
 
 // --- Test Suite ---
 describe('Settings Registration and Interaction (settings.js)', () => {
 
-    // Runs before each test case ('it' block)
+    // Runs before each test case ('it' block) in this suite
     beforeEach(() => {
         // Reset the fake storage
         mockStorageData = {};
-        // Clear call history and implementations for all mocks
-        vi.clearAllMocks();
+        // Define fresh mocks for each test to ensure isolation
+        mockLangTranslate = vi.fn(key => `translated_${key}`);
+        mockSettingsApiAddComponent = vi.fn();
+        mockSettingsApiAddParam = vi.fn();
+        mockStorageGet = vi.fn((key, defaultValue) => mockStorageData.hasOwnProperty(key) ? mockStorageData[key] : defaultValue);
+        mockStorageSet = vi.fn((key, value) => { mockStorageData[key] = value; });
+        mockSelectShow = vi.fn();
+        mockControllerEnabled = vi.fn(() => ({ name: 'default_controller_name' })); // Default mock behavior
+        mockControllerToggle = vi.fn();
 
         // Assign fresh mocks to window.Lampa (using jsdom environment)
-        // Ensures mocks are clean for each test
         window.Lampa = {
             Lang: { translate: mockLangTranslate },
             SettingsApi: { addComponent: mockSettingsApiAddComponent, addParam: mockSettingsApiAddParam },
@@ -36,6 +42,9 @@ describe('Settings Registration and Interaction (settings.js)', () => {
             Select: { show: mockSelectShow },
             Controller: { enabled: mockControllerEnabled, toggle: mockControllerToggle }
         };
+
+        // Optional: Clear mocks if defined outside, though redefining here handles reset.
+        // vi.clearAllMocks(); // Can be used if needed, but redefinition covers it.
     });
 
     // --- Registration Tests ---
@@ -43,30 +52,27 @@ describe('Settings Registration and Interaction (settings.js)', () => {
         registerSettings(); // Action
 
         expect(mockSettingsApiAddComponent).toHaveBeenCalledTimes(1);
-        // Check the arguments passed to addComponent
         expect(mockSettingsApiAddComponent).toHaveBeenCalledWith(expect.objectContaining({
             component: 'additional_ratings',
-            name: 'translated_additional_ratings_title', // Verify translation was used
-            icon: expect.stringContaining('<svg') // Check that an SVG icon string was passed
+            name: 'translated_additional_ratings_title',
+            icon: expect.stringContaining('<svg')
         }));
     });
 
     it('should register the API key parameter using SettingsApi.addParam', () => {
         registerSettings(); // Action
 
-        // Check arguments for the API key parameter registration
         expect(mockSettingsApiAddParam).toHaveBeenCalledWith(expect.objectContaining({
             component: 'additional_ratings',
             param: expect.objectContaining({ name: 'mdblist_api_key', type: 'input', 'default': '' }),
             field: expect.objectContaining({ name: 'MDBList API Key', description: 'translated_mdblist_api_key_desc' }),
-            onChange: expect.any(Function) // Verify onChange handler exists
+            onChange: expect.any(Function)
         }));
     });
 
     it('should register the select ratings button parameter using SettingsApi.addParam', () => {
         registerSettings(); // Action
 
-        // Check arguments for the button parameter registration
         expect(mockSettingsApiAddParam).toHaveBeenCalledWith(expect.objectContaining({
             component: 'additional_ratings',
             param: expect.objectContaining({ name: 'select_ratings_button', type: 'button' }),
@@ -74,110 +80,118 @@ describe('Settings Registration and Interaction (settings.js)', () => {
                 name: 'translated_select_ratings_button_name',
                 description: 'translated_select_ratings_button_desc'
             }),
-            onChange: expect.any(Function) // Verify onChange handler exists
+            onChange: expect.any(Function)
         }));
     });
 
-    // --- Interaction Tests ---
+    // --- Interaction Tests (Nested Suite) ---
     describe('Select Ratings Button Interaction', () => {
-        let buttonOnChange;
+        let buttonOnChange; // To store the button handler
 
         beforeEach(() => {
-            // Register settings to get the button's onChange handler
+            // This beforeEach runs AFTER the outer one.
+            // Register settings to get the button's onChange handler reference.
             registerSettings();
-            // Find the specific call to addParam for the button
             const buttonParamCall = mockSettingsApiAddParam.mock.calls.find(call => call[0]?.param?.name === 'select_ratings_button');
-            // Store the onChange handler for tests in this block
             buttonOnChange = buttonParamCall?.[0]?.onChange;
-            // Basic check that we found the handler
             if (typeof buttonOnChange !== 'function') {
-                throw new Error("Could not find button onChange handler in mock calls.");
+                throw new Error("Could not find button onChange handler during test setup.");
             }
-            // Clear mocks again AFTER setup to isolate interaction tests
+            // Clear mocks AFTER this setup, before specific tests run
             vi.clearAllMocks();
         });
 
         it('should call Lampa.Select.show when the button onChange is triggered', () => {
-            // Action: Trigger the button's onChange
+            // Action: Trigger the button's onChange IN THE TEST
             buttonOnChange();
 
             // Assertions
             expect(mockSelectShow).toHaveBeenCalledTimes(1);
-            // Verify the structure of the object passed to Select.show
             expect(mockSelectShow).toHaveBeenCalledWith(expect.objectContaining({
                 title: 'translated_select_ratings_dialog_title',
                 items: expect.any(Array),
                 onBack: expect.any(Function),
                 onCheck: expect.any(Function)
             }));
-            // Check that items were generated based on providers (at least check length)
+            // Verify items array structure passed to Select.show
             const selectArgs = mockSelectShow.mock.calls[0][0];
-            expect(selectArgs.items.length).toBeGreaterThan(5); // Based on the providers list
-            expect(selectArgs.items[0].id).toBe('show_rating_imdb'); // Check first item ID
+            expect(selectArgs.items.length).toBeGreaterThan(5); // Check number of providers
+            expect(selectArgs.items[0]).toEqual(expect.objectContaining({
+                 id: 'show_rating_imdb', title: 'IMDb', checkbox: true
+            }));
         });
 
         it('should call Lampa.Storage.set with TRUE when onCheck toggles from FALSE', () => {
-            // Arrange: Simulate button click to get Select.show arguments
-            buttonOnChange();
-            const selectOptions = mockSelectShow.mock.calls[0][0];
-            const onCheckCallback = selectOptions.onCheck;
             // Arrange: Set initial stored value to false for IMDb
             mockStorageData['show_rating_imdb'] = false;
-            // Arrange: Define the mock item passed by Lampa.Select when checkbox is clicked
-            const mockItem = { id: 'show_rating_imdb', checked: false, default: true };
 
-            // Action: Call the onCheck callback simulates user checking the box
+            // Action: Trigger button -> This calls showRatingProviderSelection which calls Lampa.Select.show
+            buttonOnChange();
+            expect(mockSelectShow).toHaveBeenCalledTimes(1); // Ensure mock was called
+            const selectOptions = mockSelectShow.mock.calls[0][0]; // Get options passed to mock
+            const onCheckCallback = selectOptions.onCheck; // Extract the onCheck callback
+            expect(onCheckCallback).toBeInstanceOf(Function); // Verify it's a function
+
+            // Arrange: Define the mock item passed by Lampa.Select when checkbox is clicked
+            const mockItem = { id: 'show_rating_imdb', checked: false, default: true }; // State *before* user clicks
+
+            // Action: Call the extracted onCheck callback simulates user checking the box
             onCheckCallback(mockItem);
 
             // Assertions
             expect(mockStorageSet).toHaveBeenCalledTimes(1);
-            // Check that storage was updated with the toggled value (false -> true)
+            // Check storage was updated with the *new* toggled state (false -> true)
             expect(mockStorageSet).toHaveBeenCalledWith('show_rating_imdb', true);
-            // Check that the item's checked state was visually updated
+            // Check the callback updated the item's visual state
             expect(mockItem.checked).toBe(true);
         });
 
         it('should call Lampa.Storage.set with FALSE when onCheck toggles from TRUE', () => {
-            // Arrange: Simulate button click
-            buttonOnChange();
-            const selectOptions = mockSelectShow.mock.calls[0][0];
-            const onCheckCallback = selectOptions.onCheck;
-            // Arrange: Set initial stored value to true for TMDB
-            mockStorageData['show_rating_tmdb'] = true;
-            const mockItem = { id: 'show_rating_tmdb', checked: true, default: true };
+             // Arrange: Set initial stored value to true for TMDB
+             mockStorageData['show_rating_tmdb'] = true;
 
-            // Action: Call the onCheck callback simulates user unchecking the box
-            onCheckCallback(mockItem);
+             // Action: Trigger button -> get options
+             buttonOnChange();
+             expect(mockSelectShow).toHaveBeenCalledTimes(1);
+             const selectOptions = mockSelectShow.mock.calls[0][0];
+             const onCheckCallback = selectOptions.onCheck;
+             expect(onCheckCallback).toBeInstanceOf(Function);
 
-            // Assertions
-            expect(mockStorageSet).toHaveBeenCalledTimes(1);
-            // Check that storage was updated with the toggled value (true -> false)
-            expect(mockStorageSet).toHaveBeenCalledWith('show_rating_tmdb', false);
-            expect(mockItem.checked).toBe(false); // Item state updated visually
+             // Arrange: Define the mock item state before user unchecks
+             const mockItem = { id: 'show_rating_tmdb', checked: true, default: true };
+
+             // Action: Call callback simulates user unchecking the box
+             onCheckCallback(mockItem);
+
+             // Assertions
+             expect(mockStorageSet).toHaveBeenCalledTimes(1);
+             // Check storage updated with toggled state (true -> false)
+             expect(mockStorageSet).toHaveBeenCalledWith('show_rating_tmdb', false);
+             expect(mockItem.checked).toBe(false);
         });
 
- 
         it('should call Lampa.Controller.toggle when onBack is called', () => {
-      // selectOptions and onBackCallback are available from the nested beforeEach setup
-      const onBackCallback = selectOptions.onBack;
-      expect(onBackCallback).toBeInstanceOf(Function);
+             // Action: Trigger button -> get options
+             buttonOnChange();
+             expect(mockSelectShow).toHaveBeenCalledTimes(1);
+             const selectOptions = mockSelectShow.mock.calls[0][0]; // Get options passed to mock
+             const onBackCallback = selectOptions.onBack; // Extract the onBack callback
+             expect(onBackCallback).toBeInstanceOf(Function);
 
-      const expectedControllerName = 'settings';
+             const expectedControllerName = 'settings';
+             // Arrange: Use spyOn to modify the mock method behaviour *just for the next call*
+             // This targets the 'enabled' method on the Controller mock object
+             const enabledSpy = vi.spyOn(window.Lampa.Controller, 'enabled');
+             enabledSpy.mockReturnValueOnce({ name: expectedControllerName }); // Set specific return value
 
-      // **Use vi.spyOn to modify the mock method behavior for the next call**
-      const enabledSpy = vi.spyOn(window.Lampa.Controller, 'enabled');
-      enabledSpy.mockReturnValueOnce({ name: expectedControllerName });
+             // Action: Call the extracted onBack callback
+             onBackCallback();
 
-      // Action: Call the onBack callback
-      onBackCallback();
+             // Assertions
+             expect(mockControllerToggle).toHaveBeenCalledTimes(1);
+             expect(mockControllerToggle).toHaveBeenCalledWith(expectedControllerName); // Check it was called with 'settings'
 
-      // Assertions
-      expect(mockControllerToggle).toHaveBeenCalledTimes(1);
-      expect(mockControllerToggle).toHaveBeenCalledWith(expectedControllerName);
-
-      // Optional: Restore original spy implementation if needed, though beforeEach should handle it
-      enabledSpy.mockRestore();
-        
+             enabledSpy.mockRestore(); // Clean up the spy afterwards
         });
-    });
-});
+    }); // End describe('Select Ratings Button Interaction')
+}); // End top-level describe
