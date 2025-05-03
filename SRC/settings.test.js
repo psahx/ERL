@@ -1,5 +1,5 @@
 // SRC/settings.test.js
-import { describe, it, expect, beforeEach, vi, afterEach } from 'vitest';
+import { describe, it, expect, beforeEach, vi } from 'vitest';
 
 // Import the function to test
 import { registerSettings } from './settings.js';
@@ -14,8 +14,12 @@ let mockSettingsApiAddParam;
 let mockStorageGet;
 let mockStorageSet;
 let mockSelectShow;
-let mockControllerEnabled;
 let mockControllerToggle;
+
+// Define a persistent object for the mock controller state
+// The mock 'enabled' function will return a reference to this object.
+let mockControllerState = { name: 'default_controller_name' };
+let mockControllerEnabled; // Mock function variable
 
 // --- Test Suite ---
 describe('Settings Registration and Interaction (settings.js)', () => {
@@ -24,6 +28,9 @@ describe('Settings Registration and Interaction (settings.js)', () => {
     beforeEach(() => {
         // Reset the fake storage
         mockStorageData = {};
+        // Clear call history etc. for all mocks defined in the previous run
+        vi.clearAllMocks();
+
         // Define fresh mocks for each test to ensure isolation
         mockLangTranslate = vi.fn(key => `translated_${key}`);
         mockSettingsApiAddComponent = vi.fn();
@@ -31,8 +38,13 @@ describe('Settings Registration and Interaction (settings.js)', () => {
         mockStorageGet = vi.fn((key, defaultValue) => mockStorageData.hasOwnProperty(key) ? mockStorageData[key] : defaultValue);
         mockStorageSet = vi.fn((key, value) => { mockStorageData[key] = value; });
         mockSelectShow = vi.fn();
-        mockControllerEnabled = vi.fn(() => ({ name: 'default_controller_name' })); // Default mock behavior
         mockControllerToggle = vi.fn();
+
+        // Reset the controller state object's name for the new test
+        mockControllerState.name = 'default_controller_name';
+        // Mock 'enabled' to ALWAYS return the SAME state object reference
+        mockControllerEnabled = vi.fn(() => mockControllerState);
+
 
         // Assign fresh mocks to window.Lampa (using jsdom environment)
         window.Lampa = {
@@ -42,9 +54,6 @@ describe('Settings Registration and Interaction (settings.js)', () => {
             Select: { show: mockSelectShow },
             Controller: { enabled: mockControllerEnabled, toggle: mockControllerToggle }
         };
-
-        // Optional: Clear mocks if defined outside, though redefining here handles reset.
-        // vi.clearAllMocks(); // Can be used if needed, but redefinition covers it.
     });
 
     // --- Registration Tests ---
@@ -97,8 +106,9 @@ describe('Settings Registration and Interaction (settings.js)', () => {
             if (typeof buttonOnChange !== 'function') {
                 throw new Error("Could not find button onChange handler during test setup.");
             }
-            // Clear mocks AFTER this setup, before specific tests run
-            vi.clearAllMocks();
+            // Clear mocks AFTER setup specific to this describe block's setup is done
+            // Avoids clearing mocks needed for the actions below if they were called during setup
+             vi.clearAllMocks();
         });
 
         it('should call Lampa.Select.show when the button onChange is triggered', () => {
@@ -117,7 +127,7 @@ describe('Settings Registration and Interaction (settings.js)', () => {
             const selectArgs = mockSelectShow.mock.calls[0][0];
             expect(selectArgs.items.length).toBeGreaterThan(5); // Check number of providers
             expect(selectArgs.items[0]).toEqual(expect.objectContaining({
-                 id: 'show_rating_imdb', title: 'IMDb', checkbox: true
+                id: 'show_rating_imdb', title: 'IMDb', checkbox: true
             }));
         });
 
@@ -170,28 +180,32 @@ describe('Settings Registration and Interaction (settings.js)', () => {
              expect(mockItem.checked).toBe(false);
         });
 
+        // --- Test for the onBack callback ---
         it('should call Lampa.Controller.toggle when onBack is called', () => {
-             // Action: Trigger button -> get options
+             // Action: Trigger button click to get Select.show args, including onBack
              buttonOnChange();
-             expect(mockSelectShow).toHaveBeenCalledTimes(1);
-             const selectOptions = mockSelectShow.mock.calls[0][0]; // Get options passed to mock
+             expect(mockSelectShow).toHaveBeenCalledTimes(1); // Make sure show was called
+             const selectOptions = mockSelectShow.mock.calls[0][0];
              const onBackCallback = selectOptions.onBack; // Extract the onBack callback
-             expect(onBackCallback).toBeInstanceOf(Function);
+             expect(onBackCallback).toBeInstanceOf(Function); // Verify it's a function
 
              const expectedControllerName = 'settings';
-             // Arrange: Use spyOn to modify the mock method behaviour *just for the next call*
-             // This targets the 'enabled' method on the Controller mock object
-             const enabledSpy = vi.spyOn(window.Lampa.Controller, 'enabled');
-             enabledSpy.mockReturnValueOnce({ name: expectedControllerName }); // Set specific return value
 
-             // Action: Call the extracted onBack callback
+             // **Arrange: Modify the NAME PROPERTY of the shared mock state object**
+             // This is the object that mockControllerEnabled returns by reference.
+             mockControllerState.name = expectedControllerName;
+
+             // Action: Call the onBack callback.
+             // Inside onBack: Lampa.Controller.enabled() runs -> returns mockControllerState ref.
+             // Then .name is accessed -> should now read 'settings'.
+             // Then Lampa.Controller.toggle() is called with that name.
              onBackCallback();
 
              // Assertions
              expect(mockControllerToggle).toHaveBeenCalledTimes(1);
-             expect(mockControllerToggle).toHaveBeenCalledWith(expectedControllerName); // Check it was called with 'settings'
-
-             enabledSpy.mockRestore(); // Clean up the spy afterwards
+             // Check if toggle was called with the name read from the modified state object
+             expect(mockControllerToggle).toHaveBeenCalledWith(expectedControllerName);
         });
+
     }); // End describe('Select Ratings Button Interaction')
 }); // End top-level describe
