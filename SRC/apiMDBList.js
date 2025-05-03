@@ -2,8 +2,8 @@
 'use strict';
 
 // Import necessary modules
-import { config } from './config.js';
-import { getCache, setCache } from './cache.js';
+import { config } from 'https://psahx.github.io/ERL/SRC/config.js';
+import { getCache, setCache } from 'https://psahx.github.io/ERL/SRC/cache.js';
 
 // Create the Lampa network request instance.
 // Assuming it's okay to have one instance per module load.
