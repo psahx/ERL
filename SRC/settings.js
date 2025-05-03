@@ -1,4 +1,4 @@
-// SRC/settings.js
+// .SRC/settings.js
 'use strict';
 console.log("PsahxRatingsPlugin: Executing settings.js");
 
