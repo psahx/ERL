@@ -1,5 +1,6 @@
 // SRC/cache.js
 'use strict';
+console.log("PsahxRatingsPlugin: Executing cache.js");
 
 // Import the configuration settings
 import { config } from 'https://psahx.github.io/ERL/SRC/config.js';
