@@ -3,10 +3,10 @@
 
 // --- Import necessary setup functions and the main UI component handler ---
 // Adjust paths if needed (e.g., use full URLs if relative paths fail)
-import { setupLanguages } from './language.js';
-import { registerSettings } from './settings.js';
-import { injectStyles } from './styles.js';
-import { InfoPanelHandler } from './uiInfoPanel.js'; // Import the exported class/function
+import { setupLanguages } from 'https://psahx.github.io/ERL/SRC/language.js';
+import { registerSettings } from 'https://psahx.github.io/ERL/SRC/settings.js';
+import { injectStyles } from 'https://psahx.github.io/ERL/SRC/styles.js';
+import { InfoPanelHandler } from 'https://psahx.github.io/ERL/SRC/uiInfoPanel.js'; // Import the exported class/function
 
 function component(object) { 
     
