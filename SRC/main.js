@@ -22,6 +22,8 @@ console.log('--- PsahxRatingsPlugin: main.js EXECUTING ---');
 
 
     function component(object) { 
+
+    console.log('DEBUG component: STARTING. Received object:', object ? object.source : 'undefined', 'Received InfoPanelHandler type:', typeof InfoPanelHandler);
     
     var network = new Lampa.Reguest();
     var scroll = new Lampa.Scroll({ mask: true, over: true, scroll_by_item: true });
@@ -42,6 +44,7 @@ console.log('--- PsahxRatingsPlugin: main.js EXECUTING ---');
 // Replace the existing 'this.create' within 'component' function in SRC/main.js
 
 this.create = function () {
+    console.log('--- PsahxRatingsPlugin: component.create STARTING ---');
     console.log('PsahxRatingsPlugin: component.create executing...'); // Existing log
 
     // Log the received constructor to be sure
@@ -369,7 +372,8 @@ this.build = function (data) {
             const injectStyles = stylesModule.injectStyles;
             // Get the InfoPanelHandler class/function exported from uiInfoPanel.js
             const InfoPanelHandler = uiInfoPanelModule.InfoPanelHandler;
-
+            console.log('DEBUG initializePlugin: Imported InfoPanelHandler type:', typeof InfoPanelHandler);
+    
             // --- Call Setup Functions ---
             console.log("PsahxRatingsPlugin: Calling setupLanguages...");
             setupLanguages();
@@ -403,6 +407,7 @@ this.build = function (data) {
 
                  if (useNewInterface) {
                       try {
+                          console.log('DEBUG InteractionMain Override: Passing InfoPanelHandler type:', typeof InfoPanelHandler);
                            // Pass the dynamically loaded InfoPanelHandler to the component constructor
                            return new component(object, InfoPanelHandler);
                       } catch (e) {
