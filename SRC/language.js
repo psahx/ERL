@@ -1,5 +1,6 @@
 // SRC/language.js
 'use strict';
+console.log("PsahxRatingsPlugin: Executing language.js");
 
 /**
  * Adds all necessary language strings to Lampa.Lang.
