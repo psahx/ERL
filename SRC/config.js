@@ -1,5 +1,8 @@
 // SRC/config.js
 'use strict';
+console.log("PsahxRatingsPlugin: Executing config.js");
+export const config = { /* ... */ };
+
 
 /**
  * Exports the main configuration object for the plugin.
