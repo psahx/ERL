@@ -4,10 +4,11 @@ console.log("PsahxRatingsPlugin: Executing main.js");
 
 // --- Import necessary setup functions and the main UI component handler ---
 // Adjust paths if needed (e.g., use full URLs if relative paths fail)
-import { setupLanguages } from 'https://psahx.github.io/ERL/SRC/language.js';
-import { registerSettings } from 'https://psahx.github.io/ERL/SRC/settings.js';
-import { injectStyles } from 'https://psahx.github.io/ERL/SRC/styles.js';
-import { InfoPanelHandler } from 'https://psahx.github.io/ERL/SRC/uiInfoPanel.js'; // Import the exported class/function
+// Removing these adding async
+//import { setupLanguages } from 'https://psahx.github.io/ERL/SRC/language.js';
+//import { registerSettings } from 'https://psahx.github.io/ERL/SRC/settings.js';
+//import { injectStyles } from 'https://psahx.github.io/ERL/SRC/styles.js';
+//import { InfoPanelHandler } from 'https://psahx.github.io/ERL/SRC/uiInfoPanel.js'; // Import the exported class/function
 
 function component(object) { 
     
@@ -229,62 +230,99 @@ function component(object) {
 
 /**
  * Main asynchronous initialization function for the plugin.
+ * Dynamically imports dependencies and sets up the plugin.
  */
 async function initializePlugin() {
-    console.log("PsahxRatingsPlugin: Initializing...");
+    console.log("PsahxRatingsPlugin: START initializePlugin()"); // Log Start
 
-    // --- Basic Lampa Component Checks ---
-    // Ensure essential Lampa objects needed for initialization exist
-    if (!window.Lampa || !Lampa.Utils || !Lampa.Lang || !Lampa.Storage || !Lampa.Template || !Lampa.InteractionLine || !Lampa.Manifest || !Lampa.Account || !Lampa.InteractionMain) {
+    // Basic checks for essential Lampa components needed *before* loading modules
+    if (!window.Lampa || !Lampa.Utils || !Lampa.Lang || !Lampa.Storage || !Lampa.Template || !Lampa.InteractionLine || !Lampa.Manifest || !Lampa.Account || !Lampa.InteractionMain || !Lampa.SettingsApi /* Add any other essentials */) {
         console.error("PsahxRatingsPlugin [main.js]: Missing essential Lampa components. Cannot initialize.");
         return;
     }
 
-    // --- Run Setup Functions ---
-    // These are synchronous based on our current modules
+    // Define the base URL for loading modules
+    const baseURL = 'https://psahx.github.io/ERL/SRC/';
+
     try {
+        // --- Dynamically Import Modules ---
+        console.log("PsahxRatingsPlugin: Dynamically importing modules...");
+        // Use await import() with the absolute URLs
+        const langModule = await import(baseURL + 'language.js');
+        const settingsModule = await import(baseURL + 'settings.js');
+        const stylesModule = await import(baseURL + 'styles.js');
+        const uiInfoPanelModule = await import(baseURL + 'uiInfoPanel.js');
+        // NOTE: config.js, cache.js, apiMDBList.js are imported internally by the modules above, assumed using relative paths
+        console.log("PsahxRatingsPlugin: Modules imported dynamically.");
+
+        // --- Extract needed exports AFTER awaiting the imports ---
+        const setupLanguages = langModule.setupLanguages;
+        const registerSettings = settingsModule.registerSettings;
+        const injectStyles = stylesModule.injectStyles;
+        // Get the InfoPanelHandler class/function exported from uiInfoPanel.js
+        const InfoPanelHandler = uiInfoPanelModule.InfoPanelHandler;
+
+        // --- Call Setup Functions ---
+        console.log("PsahxRatingsPlugin: Calling setupLanguages...");
         setupLanguages();
+        console.log("PsahxRatingsPlugin: DONE setupLanguages.");
+
+        console.log("PsahxRatingsPlugin: Calling registerSettings...");
         registerSettings();
+        console.log("PsahxRatingsPlugin: DONE registerSettings.");
+
+        console.log("PsahxRatingsPlugin: Calling injectStyles...");
         injectStyles();
-    } catch (e) {
-        console.error("PsahxRatingsPlugin [main.js]: Error running setup functions.", e);
-        // Optional: Decide if initialization should halt
-    }
+        console.log("PsahxRatingsPlugin: DONE injectStyles.");
 
-    // --- Hook into Lampa ---
-    // Store the original Lampa InteractionMain before overwriting
-    const originalInteractionMain = Lampa.InteractionMain;
+        // --- Override Lampa Interaction ---
+        console.log("PsahxRatingsPlugin: Overriding Lampa.InteractionMain...");
+        const originalInteractionMain = Lampa.InteractionMain;
 
-    // Replace Lampa's InteractionMain
-    Lampa.InteractionMain = function (object) {
-        // Determine if the new interface should be used based on original conditions
-        let useNewInterface = true; // Default to using it
-        try {
-            // Add checks safely
-            if (!(object.source == 'tmdb' || object.source == 'cub')) useNewInterface = false;
-            if (window.innerWidth < 767) useNewInterface = false;
-            if (!Lampa.Account.hasPremium()) useNewInterface = false;
-            if (Lampa.Manifest.app_digital < 153) useNewInterface = false;
-        } catch (e) {
-            console.error("PsahxRatingsPlugin [main.js]: Error checking conditions for InteractionMain override. Falling back to original.", e);
-            useNewInterface = false; // Fallback to original if checks fail
-        }
-
-
-        if (useNewInterface) {
-            // Use our enhanced component (which uses InfoPanelHandler internally)
+        // Define the replacement function for Lampa.InteractionMain
+        Lampa.InteractionMain = function (object) {
+            let useNewInterface = true; // Default to using the new interface
             try {
-                 return new component(object);
+                // Original conditions to determine if the new interface should be used
+                if (!(object.source == 'tmdb' || object.source == 'cub')) useNewInterface = false;
+                if (window.innerWidth < 767) useNewInterface = false;
+                if (!Lampa.Account.hasPremium()) useNewInterface = false;
+                if (Lampa.Manifest.app_digital < 153) useNewInterface = false;
             } catch (e) {
-                 console.error("PsahxRatingsPlugin [main.js]: Error creating new 'component' instance. Falling back to original.", e);
-                 // Fallback to original if our component fails to instantiate
-                 return new originalInteractionMain(object);
+                console.error("PsahxRatingsPlugin [main.js]: Error checking conditions for InteractionMain override. Falling back.", e);
+                useNewInterface = false; // Fallback to original if checks fail
             }
-        } else {
-            // Use the original Lampa InteractionMain
-            return new originalInteractionMain(object);
+
+            if (useNewInterface) {
+                 try {
+                      // Use the 'component' function (which should be defined elsewhere in main.js)
+                      // It's assumed that 'component' internally uses 'new InfoPanelHandler(object)'
+                      // and that 'InfoPanelHandler' is accessible in its scope.
+                      return new component(object);
+                 } catch (e) {
+                      console.error("PsahxRatingsPlugin [main.js]: Error creating new 'component' instance. Falling back.", e);
+                      return new originalInteractionMain(object); // Fallback if 'component' fails
+                 }
+            } else {
+                // Use the original Lampa InteractionMain
+                return new originalInteractionMain(object);
+            }
+        };
+        console.log("PsahxRatingsPlugin: DONE Lampa.InteractionMain override.");
+
+        // Mark the plugin as ready
+        window.plugin_interface_ready = true;
+        console.log("PsahxRatingsPlugin: END initializePlugin() SUCCESS.");
+
+    } catch (error) {
+        // Catch any errors during import or setup
+        console.error("PsahxRatingsPlugin [main.js]: CRITICAL ERROR during initializePlugin (likely module import failed):", error);
+        // Optionally notify the user in Lampa UI if Lampa.Noty is available
+        if (window.Lampa && Lampa.Noty) {
+            Lampa.Noty.show("Error initializing PsahxRatingsPlugin: " + error.message, { time: 10000 });
         }
-    };
+    }
+}; // --- End of initializePlugin function ---
 
     // Mark the plugin as ready using the original flag
     window.plugin_interface_ready = true;
