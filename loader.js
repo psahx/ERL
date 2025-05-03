@@ -1,5 +1,4 @@
-// In loader.js (root folder)
-const mainScriptUrl = 'https://psahx.github.io/ERL/SRC/main.js'; // Replace with actual URL
+// loader.js
+const mainScriptUrl = 'https://psahx.github.io/ERL/SRC/main.js';
 Lampa.Utils.putScriptAsync([mainScriptUrl], function () {
-    console.log("PsahxRatingsPlugin: Executing loader.js");
 });
