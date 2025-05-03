@@ -1,5 +1,6 @@
 // SRC/styles.js
 'use strict';
+console.log("PsahxRatingsPlugin: Executing styles.js");
 
 // CSS styles string - MAKE SURE TO PASTE YOUR *ENTIRE* ORIGINAL CSS HERE
 const cssString = `
