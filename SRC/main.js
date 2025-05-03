@@ -81,31 +81,70 @@ console.log('--- PsahxRatingsPlugin: main.js EXECUTING ---');
     }; 
             
     this.push = function () {}; 
-    this.build = function (data) { 
-        var _this2 = this; 
-        lezydata = data; 
-        info = new create(object); 
-        info.create(); 
-        scroll.minus(info.render()); 
-        data.slice(0, viewall ? data.length : 2).forEach(this.append.bind(this)); 
-        html.append(info.render()); html.append(scroll.render()); 
-        if (newlampa) { 
-            Lampa.Layer.update(html); 
-            Lampa.Layer.visible(scroll.render(true)); 
-            scroll.onEnd = this.loadNext.bind(this); 
-            scroll.onWheel = function (step) { 
-                if (!Lampa.Controller.own(_this2)) _this2.start(); 
-                if (step > 0) _this2.down(); else if (active > 0) _this2.up(); 
-            }; 
-        } 
-        if (items.length > 0 && items[0] && items[0].data) { 
-            active = 0; 
-            info.update(items[active].data); 
-            this.background(items[active].data); 
-        } 
-        this.activity.loader(false); 
-        this.activity.toggle(); 
-    }; 
+
+        
+    this.build = function (data) {
+    var _this2 = this;
+    lezydata = data; // Store data reference
+
+    // --- Ensure the 'info' instance exists ---
+    // It should have been created by 'this.create = function() {...}'
+    // This check calls 'this.create()' only if 'info' hasn't been initialized yet.
+    if (!info) {
+        console.log("PsahxRatingsPlugin: component.build calling this.create()...");
+        this.create(); // Ensure info panel is created via the component's create method
+        // Safety check in case this.create failed somehow
+        if (!info) {
+             console.error("PsahxRatingsPlugin: component.build - this.create() did not initialize 'info' instance!");
+             // Maybe stop here or show an error UI? For now, just log and potentially stop.
+             if(this.activity) this.activity.loader(false); // Try to stop loader
+             return;
+        }
+    }
+   
+    // Ensure scroll object exists from component scope
+    if (scroll && info && typeof info.render === 'function') {
+         scroll.minus(info.render()); // Assuming this was the correct place
+    } else { console.error("PsahxRatingsPlugin: Missing scroll/info object in build"); }
+
+    // Ensure 'this.append' exists
+    if (typeof this.append === 'function') {
+         data.slice(0, viewall ? data.length : 2).forEach(this.append.bind(this));
+    }
+
+    // Ensure 'html' object exists
+    if (html && info && scroll && typeof info.render === 'function' && typeof scroll.render === 'function') {
+        html.append(info.render()); // Append the InfoPanelHandler's rendered HTML
+        html.append(scroll.render()); // Append the scrollable items list
+    } else { console.error("PsahxRatingsPlugin: Missing html/info/scroll object in build"); }
+
+
+    if (newlampa) { // Check Lampa components used here
+        if (window.Lampa && Lampa.Layer && Lampa.Controller && scroll.onEnd && scroll.onWheel) {
+            Lampa.Layer.update(html);
+            Lampa.Layer.visible(scroll.render(true));
+            scroll.onEnd = this.loadNext.bind(this);
+            scroll.onWheel = function (step) {
+                if (!Lampa.Controller.own(_this2)) _this2.start();
+                if (step > 0) _this2.down(); else if (active > 0) _this2.up();
+            };
+        } else { console.error("PsahxRatingsPlugin: Missing Lampa components for newlampa logic in build."); }
+    }
+
+    // Ensure 'items' array exists before accessing
+    if (items && items.length > 0 && items[0] && items[0].data && info) {
+        active = 0;
+        info.update(items[active].data); // Update the info panel
+        this.background(items[active].data); // Update background
+    }
+
+    // Check Lampa.Activity before using
+    // Also assuming 'this.activity' is correctly assigned when component is created by Lampa
+    if (this.activity && typeof this.activity.loader === 'function') {
+         this.activity.loader(false);
+         this.activity.toggle();
+    } else { console.error("PsahxRatingsPlugin: this.activity not properly set up in component.build."); }
+};
     
     this.background = function (elem) {
         if (!elem || !elem.backdrop_path) return; 
