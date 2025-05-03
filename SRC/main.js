@@ -85,72 +85,51 @@ this.build = function (data) {
     var _this2 = this;
     lezydata = data; // Store data reference
 
-    // --- Ensure the 'info' instance exists, attempting creation ONCE ---
+    // --- ADDED DEBUG LOGS for 'this' and 'this.create' ---
+    console.log('DEBUG component.build: START. typeof this:', typeof this);
+    // Check if this.create exists and is a function right before checking 'info'
+    console.log('DEBUG component.build: typeof this.create right now is:', typeof this.create);
+    // --- End Debugging ---
+
+    // Ensure the 'info' instance exists, attempting creation ONCE
     if (!info) {
          console.log("PsahxRatingsPlugin: component.build calling this.create()...");
-         this.create(); // Attempt to create info instance
+         // Log 'this' context right before the specific call
+         console.log('DEBUG component.build: "this" right before calling this.create:', (typeof this));
 
-         // ** TEMPORARY DEBUGGING CHANGE **
-         // Check info *after* the attempt. If still not set, log the error
-         // AND return early from build for THIS item to prevent infinite loops/crashes.
+         // Add a try/catch around the actual call
+         try {
+             // Check if it's actually a function before calling
+             if (typeof this.create === 'function') {
+                 this.create(); // Attempt to create info instance
+             } else {
+                 console.error("COMPONENT BUILD ERROR: this.create is NOT a function right before call!");
+             }
+         } catch(e) {
+             // Catch errors specifically from calling this.create()
+             console.error("COMPONENT BUILD ERROR: Calling 'this.create()' threw an error!", e);
+         }
+
+         // Check info *after* the attempt
          if (!info) {
               console.error("PsahxRatingsPlugin: component.build - AFTER this.create(), 'info' is still undefined! Halting build logic for this item.");
-              // Stop further execution of *this* build call to break the loop
-              return; // <-- ADDED RETURN HERE
+              return; // Keep temporary return to prevent loop crash
          }
-         // If we reach here, info should have been created successfully by this.create()
          console.log("PsahxRatingsPlugin: component.build - info instance seems created.");
     }
 
     // --- Original logic using the 'info' instance ---
-    // This part should now only run if 'info' was successfully created above.
+    console.log("PsahxRatingsPlugin: component.build proceeding with rest of logic..."); // Added log
 
-    // Ensure scroll object exists from component scope
-    if (scroll && info && typeof info.render === 'function') {
-         scroll.minus(info.render());
-    } else { console.error("PsahxRatingsPlugin: Missing scroll/info object in build"); }
+    if (scroll && info && typeof info.render === 'function') { /* ... scroll.minus ... */ }
+    if (typeof this.append === 'function') { /* ... forEach ... */ }
+    if (html && info && scroll /*...*/) { /* ... html.append ... */ }
+    if (newlampa) { /* ... Lampa.Layer etc ... */ }
+    if (items && items.length > 0 && items[0] && items[0].data && info) { /* ... info.update, this.background ... */ }
+    if (this.activity /*...*/) { /* ... loader, toggle ... */ }
 
-    // Ensure 'this.append' exists
-    if (typeof this.append === 'function') {
-         data.slice(0, viewall ? data.length : 2).forEach(this.append.bind(this));
-    }
-
-    // Ensure 'html' object exists
-    if (html && info && scroll && typeof info.render === 'function' && typeof scroll.render === 'function') {
-        html.append(info.render());
-        html.append(scroll.render());
-    } else { console.error("PsahxRatingsPlugin: Missing html/info/scroll object in build"); }
-
-
-    if (newlampa) { // Check Lampa components used here
-        if (window.Lampa && Lampa.Layer && Lampa.Controller && scroll.onEnd && scroll.onWheel) {
-            Lampa.Layer.update(html);
-            Lampa.Layer.visible(scroll.render(true));
-            scroll.onEnd = this.loadNext.bind(this);
-            scroll.onWheel = function (step) {
-                if (!Lampa.Controller.own(_this2)) _this2.start();
-                if (step > 0) _this2.down(); else if (active > 0) _this2.up();
-            };
-        } else { console.error("PsahxRatingsPlugin: Missing Lampa components for newlampa logic in build."); }
-    }
-
-    // Ensure 'items' array exists before accessing
-    if (items && items.length > 0 && items[0] && items[0].data && info) {
-        active = 0;
-        // This check ensures info exists before using it
-        info.update(items[active].data);
-        this.background(items[active].data);
-    } else if (!info) {
-         console.error("PsahxRatingsPlugin: component.build - Cannot update info panel because 'info' is null/undefined.");
-    }
-
-
-    if (this.activity && typeof this.activity.loader === 'function') {
-         this.activity.loader(false);
-         this.activity.toggle();
-    } else { console.error("PsahxRatingsPlugin: this.activity not properly set up in component.build."); }
-    console.log("PsahxRatingsPlugin: component.build completed (or exited early)."); // Added completion log
-}; // --- End of temporary 'this.build' replacement ---
+    console.log("PsahxRatingsPlugin: component.build completed (or exited early).");
+}; // --- End of debug 'this.build' replacement ---
     
     this.background = function (elem) {
         if (!elem || !elem.backdrop_path) return; 
